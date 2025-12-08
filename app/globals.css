@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@plugin "tailwindcss-animate";
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  /* --- COLOR PALETTE: "Cyber Professional" --- */
+  
+  /* Background & Foreground (Dark Theme Default) */
+  --color-background: #0a0a0a; /* Hitam pekat tapi tidak mati */
+  --color-foreground: #ededed; /* Putih gading untuk teks */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Primary: Electric Indigo (Untuk tombol utama/highlight) */
+  --color-primary: #6366f1; 
+  --color-primary-foreground: #ffffff;
+
+  /* Secondary: Slate (Untuk elemen pendukung) */
+  --color-secondary: #1e293b;
+  --color-secondary-foreground: #f8fafc;
+
+  /* Accent: Neon Cyan (Untuk detail kecil yang "pop") */
+  --color-accent: #06b6d4;
+  --color-accent-foreground: #ffffff;
+
+  /* Muted: Untuk teks yang tidak terlalu penting */
+  --color-muted: #334155;
+  --color-muted-foreground: #94a3b8;
+
+  /* Border & Input */
+  --color-border: #1e293b;
+  --color-input: #1e293b;
+  --color-ring: #6366f1;
+
+  /* --- TYPOGRAPHY --- */
+  /* Kita akan setup font di layout.tsx nanti */
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-space); 
+
+  /* --- ANIMATIONS --- */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+  @keyframes shimmer {
+    from { background-position: 0 0; }
+    to { background-position: -200% 0; }
   }
 }
 
+/* --- BASE UTILITIES --- */
+:root {
+  /* Setup variable CSS standar untuk kompatibilitas */
+  --background: 10 10 10;
+  --foreground: 237 237 237;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Mencegah scroll horizontal liar */
+}
+
+/* --- UTILITY CLASSES --- */
+@layer utilities {
+  /* Glassmorphism Modern */
+  .glass {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+  }
+  
+  .glass-card {
+    @apply backdrop-blur-md bg-black/40 border border-white/5 shadow-xl;
+  }
+
+  /* Text Gradients */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400;
+  }
+  
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400;
+  }
+
+  /* Layout Helper */
+  .container-width {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
 }
