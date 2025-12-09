@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Code2, Sparkles, BookOpen } from "lucide-react"; // Import icon BookOpen
+import { Menu, X, Code2, Sparkles, BookOpen, Briefcase } from "lucide-react"; // Import Briefcase
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,8 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "About", path: "/about" },
   { name: "Projects", path: "/projects" },
-  { name: "Blog", path: "/blog" }, // Menu Baru
+  { name: "Services", path: "/services" }, // Menu Baru Ditambahkan
+  { name: "Blog", path: "/blog" },
   { name: "Contact", path: "/contact" },
 ];
 
@@ -61,7 +62,7 @@ export function Navbar() {
           {/* --- DESKTOP MENU --- */}
           <nav className="hidden md:flex items-center gap-1 bg-white/5 backdrop-blur-sm px-2 py-1 rounded-full border border-white/5">
             {navItems.map((item) => {
-              // Logic agar active state menyala di sub-halaman (misal /blog/judul-artikel tetap aktif di Blog)
+              // Logic agar active state menyala di sub-halaman
               const isActive = item.path === "/" 
                 ? pathname === "/" 
                 : pathname.startsWith(item.path);
@@ -83,8 +84,9 @@ export function Navbar() {
                     />
                   )}
                   <span className="relative z-10 flex items-center gap-2">
-                    {/* Optional: Icon kecil di menu */}
+                    {/* Icon kecil di menu */}
                     {item.name === "Blog" && <BookOpen size={14} className="opacity-70" />}
+                    {item.name === "Services" && <Briefcase size={14} className="opacity-70" />}
                     {item.name}
                   </span>
                 </Link>

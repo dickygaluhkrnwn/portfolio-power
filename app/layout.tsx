@@ -22,35 +22,35 @@ const spaceGrotesk = Space_Grotesk({
 // --- SEO CONFIGURATION ---
 export const metadata: Metadata = {
   title: {
-    default: "Your Name | Full Stack Developer",
-    template: "%s | Your Name Portfolio",
+    default: "Dicky Galuh Kurniawan | Full Stack Developer",
+    template: "%s | Iky Portfolio",
   },
-  description: "Portofolio Full Stack Developer yang berfokus pada membangun pengalaman digital yang cepat, skalabel, dan estetik.",
-  keywords: ["Full Stack Developer", "Next.js", "React", "Tailwind CSS", "Web Developer Indonesia"],
-  authors: [{ name: "Your Name", url: "https://yourwebsite.com" }],
-  creator: "Your Name",
+  description: "Portofolio resmi Dicky Galuh Kurniawan (Iky). Full Stack Developer yang fokus membangun aplikasi web modern, cepat, dan user-friendly.",
+  keywords: ["Dicky Galuh Kurniawan", "Iky", "Full Stack Developer", "Next.js", "React", "Web Developer Indonesia", "Portfolio"],
+  authors: [{ name: "Dicky Galuh Kurniawan", url: "https://dickygaluh.com" }], // Ganti URL domain nanti
+  creator: "Dicky Galuh Kurniawan",
   openGraph: {
     type: "website",
     locale: "id_ID",
-    url: "https://yourwebsite.com",
-    title: "Your Name | Building Digital Masterpieces",
-    description: "Lihat karya terbaik saya dalam pengembangan web modern.",
-    siteName: "Your Name Portfolio",
+    url: "https://dickygaluh.com",
+    title: "Dicky Galuh Kurniawan | Building Digital Masterpieces",
+    description: "Lihat karya terbaik Iky dalam pengembangan web modern.",
+    siteName: "Iky Portfolio",
     images: [
       {
-        url: "/og-image.jpg", // Pastikan buat gambar ini nanti (1200x630px)
+        url: "/og-image.jpg", // Nanti bisa diganti link Imgur cover
         width: 1200,
         height: 630,
-        alt: "Portfolio Preview",
+        alt: "Dicky Galuh Kurniawan Portfolio",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Your Name | Full Stack Developer",
+    title: "Dicky Galuh Kurniawan | Full Stack Developer",
     description: "Membangun solusi web modern dengan teknologi terkini.",
-    images: ["/og-image.jpg"],
-    creator: "@yourtwitterhandle",
+    images: ["/og-image.jpg"], 
+    creator: "@iky_username", // Ganti username sosmed
   },
   icons: {
     icon: "/favicon.ico",

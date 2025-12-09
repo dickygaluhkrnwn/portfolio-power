@@ -11,6 +11,8 @@ const variants = {
   outline: "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground hover:border-accent/50",
   ghost: "hover:bg-accent/10 hover:text-accent",
   link: "text-primary underline-offset-4 hover:underline",
+  // Tambahkan varian destructive di sini
+  destructive: "bg-red-500 text-white hover:bg-red-600 border border-red-600/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]",
 };
 
 const sizes = {
