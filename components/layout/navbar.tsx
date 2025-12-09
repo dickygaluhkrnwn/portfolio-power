@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Code2, Sparkles } from "lucide-react";
+import { Menu, X, Code2, Sparkles, BookOpen } from "lucide-react"; // Import icon BookOpen
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +12,7 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "About", path: "/about" },
   { name: "Projects", path: "/projects" },
+  { name: "Blog", path: "/blog" }, // Menu Baru
   { name: "Contact", path: "/contact" },
 ];
 
@@ -20,7 +21,6 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Efek scroll untuk mengubah tampilan navbar saat digulir
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -61,7 +61,11 @@ export function Navbar() {
           {/* --- DESKTOP MENU --- */}
           <nav className="hidden md:flex items-center gap-1 bg-white/5 backdrop-blur-sm px-2 py-1 rounded-full border border-white/5">
             {navItems.map((item) => {
-              const isActive = pathname === item.path;
+              // Logic agar active state menyala di sub-halaman (misal /blog/judul-artikel tetap aktif di Blog)
+              const isActive = item.path === "/" 
+                ? pathname === "/" 
+                : pathname.startsWith(item.path);
+
               return (
                 <Link
                   key={item.path}
@@ -78,7 +82,11 @@ export function Navbar() {
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                     />
                   )}
-                  <span className="relative z-10">{item.name}</span>
+                  <span className="relative z-10 flex items-center gap-2">
+                    {/* Optional: Icon kecil di menu */}
+                    {item.name === "Blog" && <BookOpen size={14} className="opacity-70" />}
+                    {item.name}
+                  </span>
                 </Link>
               );
             })}
@@ -90,7 +98,7 @@ export function Navbar() {
               variant="outline"
               size="sm"
               className="hidden md:flex rounded-full border-white/20 text-white hover:bg-white hover:text-black hover:border-white transition-all"
-              onClick={() => window.open("/resume.pdf", "_blank")} // Placeholder untuk resume
+              onClick={() => window.open("/resume.pdf", "_blank")} 
             >
               Resume <Sparkles size={14} className="ml-2 text-accent" />
             </Button>

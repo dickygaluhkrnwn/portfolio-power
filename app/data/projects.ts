@@ -19,8 +19,6 @@ export interface Project {
   client?: string;
 }
 
-// Data dummy ini digunakan untuk 'seeding' awal saja
-// Nanti aplikasi akan membaca dari Firebase, bukan dari variabel ini
 export const projects: Project[] = [
   {
     id: "1",
@@ -79,5 +77,43 @@ export const projects: Project[] = [
       "Dark/Sage Theme Implementation",
       "Mobile-First Navigation"
     ]
-  }
+  },
+  {
+    id: "3",
+    title: "Atika Cake & Bakery",
+    subtitle: "Premium Custom Cakes in Lombok",
+    desc: "Katalog digital untuk toko kue legendaris di Lombok dengan 3 cabang. Menampilkan produk unggulan seperti Custom Tart dan Wedding Cake dengan visual yang menggugah selera.",
+    category: "frontend",
+    techStack: [
+      { name: "Next.js 16", color: "#000000" },
+      { name: "Tailwind CSS v4", color: "#38B2AC" },
+      { name: "Framer Motion", color: "#E902B5" },
+    ],
+    image: "/images/atika-cover.jpg", // Pastikan file ini ada!
+    demoLink: "https://atika-cake-bakery.vercel.app/",
+    repoLink: "#",
+    featured: true,
+    year: "2024",
+    role: "Frontend Developer",
+    client: "Atika Cake & Bakery",
+    challenge: "Tantangannya adalah mengelola katalog produk yang sangat beragam (Tart, Roti, Snack) dan memudahkan pelanggan menemukan lokasi 3 cabang yang tersebar di Lombok (Mataram, Praya, Kediri).",
+    solution: "Saya merancang sistem kategori menu yang dinamis dan halaman 'Lokasi' yang terintegrasi dengan Google Maps. UI didominasi warna brand (Merah & Kuning) namun tetap terlihat modern dan bersih.",
+    features: [
+      "Dynamic WhatsApp Ordering Link",
+      "Multi-location Branch Finder",
+      "Product Category Filtering",
+      "Responsive Mobile Layout",
+      "Brand Identity Implementation"
+    ]
+  },
+  {
+    id: "4",
+    title: "Crypto Dashboard",
+    desc: "Dashboard real-time tracking harga aset kripto dengan WebSocket dan grafik interaktif.",
+    category: "frontend",
+    techStack: [{ name: "Vue.js", color: "#4FC08D" }],
+    image: "/images/projects/crypto.jpg",
+    demoLink: "#",
+    featured: false
+  },
 ];

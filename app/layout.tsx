@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger";
+import { AuthProvider } from "@/lib/auth-context";
 
 // Font Setup
 const inter = Inter({
@@ -79,9 +80,11 @@ export default function RootLayout({
           spaceGrotesk.variable
         )}
       >
-        <CommandPalette />
-        {children}
-        <CommandMenuTrigger />
+        <AuthProvider>
+          <CommandPalette />
+          {children}
+          <CommandMenuTrigger />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -90,4 +90,47 @@ body {
   .container-width {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+
+  /* Form Helpers (Tambahan untuk Admin Panel) */
+  .input-field {
+    @apply w-full px-4 py-2 rounded-lg bg-black/20 border border-white/10 focus:border-primary outline-none transition-colors text-foreground placeholder:text-muted-foreground/50;
+  }
+
+  /* Custom Typography untuk Blog (Prose Style) */
+  .prose h1 {
+    @apply text-3xl font-bold mt-8 mb-4 text-white font-heading;
+  }
+  .prose h2 {
+    @apply text-2xl font-bold mt-8 mb-4 text-white font-heading;
+  }
+  .prose h3 {
+    @apply text-xl font-bold mt-6 mb-3 text-white/90 font-heading;
+  }
+  .prose p {
+    @apply mb-4 leading-7 text-gray-300;
+  }
+  .prose ul {
+    @apply list-disc list-outside ml-6 mb-4 space-y-2 text-gray-300;
+  }
+  .prose ol {
+    @apply list-decimal list-outside ml-6 mb-4 space-y-2 text-gray-300;
+  }
+  .prose blockquote {
+    @apply border-l-4 border-primary pl-4 py-2 my-6 bg-white/5 rounded-r-lg italic text-gray-400;
+  }
+  .prose a {
+    @apply text-primary hover:underline;
+  }
+  .prose img {
+    @apply rounded-xl my-8 w-full border border-white/10 shadow-lg;
+  }
+  .prose code {
+    @apply bg-white/10 px-1.5 py-0.5 rounded text-sm font-mono text-accent;
+  }
+  .prose pre {
+    @apply bg-black/40 p-4 rounded-lg overflow-x-auto border border-white/5 text-sm my-4;
+  }
+  .prose pre code {
+    @apply bg-transparent p-0 text-gray-300;
+  }
 }
