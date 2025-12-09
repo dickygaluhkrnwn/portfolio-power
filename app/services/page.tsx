@@ -11,9 +11,8 @@ import {
   Search, X 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 
-// Kategori Web Focused
+// Kategori disesuaikan dengan data baru (Web Focused)
 const categories = [
   { id: "all", label: "Semua Paket" },
   { id: "frontend", label: "Frontend Website" },
@@ -22,7 +21,6 @@ const categories = [
 ];
 
 export default function ServicesPage() {
-  const router = useRouter();
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -47,6 +45,13 @@ export default function ServicesPage() {
     
     return matchesSearch && matchesCategory;
   });
+
+  const handleWhatsApp = (pkg: ServicePackage) => {
+    const phone = "6285904320201"; 
+    const message = `Halo Iky, saya tertarik dengan paket *${pkg.title}* (${pkg.price}). Bisa diskusi lebih lanjut?`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
 
   const handleNego = (pkgTitle: string) => {
     const phone = "6285904320201";
@@ -83,7 +88,7 @@ export default function ServicesPage() {
               Pilih Paket, <br/><span className="text-gradient-primary">Mulai Digital.</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Jelajahi berbagai pilihan paket layanan spesifik untuk kebutuhan website Anda. Transparan dan profesional.
+              Jelajahi 16 pilihan paket layanan spesifik untuk kebutuhan website Anda. Transparan dan profesional.
             </p>
           </motion.div>
         </div>
@@ -198,13 +203,12 @@ export default function ServicesPage() {
                     </div>
 
                     <div className="mt-auto space-y-3">
-                      {/* Tombol Lihat Detail */}
                       <Button 
                         className="w-full rounded-xl group text-sm h-11" 
                         variant={item.recommended ? "primary" : "outline"}
-                        onClick={() => router.push(`/services/${item.id}`)}
+                        onClick={() => handleWhatsApp(item)}
                       >
-                        Lihat Detail <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        Pilih Paket <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
                       </Button>
                       
                       <button 
