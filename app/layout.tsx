@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger";
 import { AuthProvider } from "@/lib/auth-context";
+import { Analytics } from "@vercel/analytics/react"; // Import Vercel Analytics
 
 // Font Setup
 const inter = Inter({
@@ -83,6 +84,7 @@ export default function RootLayout({
         <AuthProvider>
           <CommandPalette />
           {children}
+          <Analytics /> {/* Komponen Analytics ditambahkan di sini */}
           <CommandMenuTrigger />
         </AuthProvider>
       </body>
