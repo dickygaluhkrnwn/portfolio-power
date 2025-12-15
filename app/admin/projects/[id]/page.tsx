@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Plus, Trash, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash, Loader2, Image as ImageIcon } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, addDoc, collection } from "firebase/firestore";
 import { Project } from "@/app/data/projects";
+import TiptapEditor from "@/components/ui/tiptap-editor";
 
 // Initial empty state
 const initialProject: Partial<Project> = {
@@ -37,6 +38,7 @@ export default function ProjectFormPage() {
   const [formData, setFormData] = useState<Partial<Project>>(initialProject);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null); // New Error State
 
   // Load data if editing
   useEffect(() => {
@@ -47,16 +49,21 @@ export default function ProjectFormPage() {
 
   const loadProject = async (id: string) => {
     try {
+      setLoading(true);
+      setError(null);
       const docRef = doc(db, "projects", id);
       const docSnap = await getDoc(docRef);
+      
       if (docSnap.exists()) {
-        setFormData({ id: docSnap.id, ...docSnap.data() } as Project);
+        // Merge with initial data to ensure all fields exist
+        const data = docSnap.data() as Project;
+        setFormData({ ...initialProject, ...data, id: docSnap.id });
       } else {
-        alert("Project not found!");
-        router.push("/admin/dashboard");
+        setError("Project tidak ditemukan.");
       }
     } catch (error) {
       console.error("Error loading project:", error);
+      setError("Gagal memuat data project. Periksa koneksi internet Anda.");
     } finally {
       setLoading(false);
     }
@@ -65,12 +72,17 @@ export default function ProjectFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
 
     try {
+      // Basic Validation
+      if (!formData.title || !formData.desc) {
+        throw new Error("Judul dan Deskripsi wajib diisi.");
+      }
+
       if (isNew) {
         // Create new
-        const newDocRef = doc(collection(db, "projects")); // Auto ID
-        // Atau custom ID: const newDocRef = doc(db, "projects", "custom-id");
+        const newDocRef = doc(collection(db, "projects"));
         await setDoc(newDocRef, { ...formData, id: newDocRef.id });
       } else {
         // Update existing
@@ -78,9 +90,9 @@ export default function ProjectFormPage() {
       }
       
       router.push("/admin/dashboard");
-    } catch (error) {
-      console.error("Error saving project:", error);
-      alert("Failed to save project.");
+    } catch (err: any) {
+      console.error("Error saving project:", err);
+      setError(err.message || "Gagal menyimpan project.");
     } finally {
       setSaving(false);
     }
@@ -129,7 +141,24 @@ export default function ProjectFormPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+  }
+
+  // Render Error State
+  if (error && !formData.title && !isNew) {
+     return (
+        <ProtectedRoute>
+          <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
+            <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-xl text-center max-w-md">
+              <h3 className="text-xl font-bold text-red-400 mb-2">Terjadi Kesalahan</h3>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>
+                Kembali ke Dashboard
+              </Button>
+            </div>
+          </div>
+        </ProtectedRoute>
+     );
   }
 
   return (
@@ -149,14 +178,21 @@ export default function ProjectFormPage() {
         <main className="container-width py-8">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
             
+            {/* Show Error Alert inside form if save fails */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-lg text-red-400 text-sm mb-6 animate-in fade-in slide-in-from-top-2">
+                {error}
+              </div>
+            )}
+
             {/* Basic Info Section */}
             <section className="space-y-4 bg-secondary/5 p-6 rounded-xl border border-white/5">
               <h3 className="text-lg font-bold border-b border-white/10 pb-2 mb-4">Basic Information</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Title</label>
-                  <input required className="input-field" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                  <label className="text-sm font-medium">Title *</label>
+                  <input required className="input-field font-bold" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Subtitle</label>
@@ -165,8 +201,12 @@ export default function ProjectFormPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Description (Short)</label>
-                <textarea required className="input-field min-h-[80px]" value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} />
+                <label className="text-sm font-medium">Description (Rich Text) *</label>
+                <TiptapEditor 
+                  content={formData.desc || ""} 
+                  onChange={(html) => setFormData({...formData, desc: html})} 
+                />
+                <p className="text-xs text-muted-foreground">Gunakan editor ini untuk membuat paragraf, list, atau format teks lainnya.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -189,7 +229,9 @@ export default function ProjectFormPage() {
 
             {/* Media & Links */}
             <section className="space-y-4 bg-secondary/5 p-6 rounded-xl border border-white/5">
-              <h3 className="text-lg font-bold border-b border-white/10 pb-2 mb-4">Media & Links</h3>
+              <h3 className="text-lg font-bold border-b border-white/10 pb-2 mb-4 flex items-center gap-2">
+                 <ImageIcon size={18} /> Media & Links
+              </h3>
               
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cover Image URL (Imgur Link)</label>
@@ -200,8 +242,13 @@ export default function ProjectFormPage() {
                   placeholder="https://i.imgur.com/..."
                 />
                 {formData.image && (
-                  <div className="mt-2 relative h-40 w-full rounded-lg overflow-hidden border border-white/10">
-                    <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="mt-2 relative h-40 w-full rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                    <img 
+                        src={formData.image} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
+                    />
                   </div>
                 )}
               </div>

@@ -50,7 +50,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  // --- Render konten sama seperti sebelumnya ---
+  // --- Render konten ---
   return (
     <main className="min-h-screen bg-background text-foreground relative overflow-hidden">
       <Navbar />
@@ -94,9 +94,12 @@ export default function ProjectDetailPage() {
                 {project.subtitle}
               </p>
             )}
-            <p className="text-muted-foreground text-lg leading-relaxed mb-8">
-              {project.desc}
-            </p>
+            
+            {/* FIX: Menggunakan dangerouslySetInnerHTML untuk render Rich Text */}
+            <div 
+              className="prose prose-invert prose-lg text-muted-foreground leading-relaxed mb-8 max-w-none"
+              dangerouslySetInnerHTML={{ __html: project.desc }}
+            />
 
             <div className="flex flex-wrap gap-4">
               {project.demoLink && (

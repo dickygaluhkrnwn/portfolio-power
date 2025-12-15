@@ -8,7 +8,7 @@ import { ArrowLeft, Save, Loader2, Trash, Plus, X, Image as ImageIcon, Zap, Perc
 import { getServiceById, saveService, deleteService } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
 
-// Kita extend tipe data ServicePackage untuk mengakomodasi field baru sementara (jika belum ada di interface utama)
+// Kita extend tipe data ServicePackage untuk mengakomodasi field baru sementara
 type ExtendedServicePackage = Partial<ServicePackage> & {
   flashSaleEndDate?: string;
 };
@@ -43,6 +43,7 @@ export default function ServiceFormPage() {
   const [isDiscountActive, setIsDiscountActive] = useState(false); 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null); // State error baru
 
   useEffect(() => {
     if (!isNew && id) {
@@ -52,19 +53,23 @@ export default function ServiceFormPage() {
 
   const loadData = async (id: string) => {
     try {
+      setLoading(true);
+      setError(null);
       const data = await getServiceById(id);
+      
       if (data) {
-        // FIX: Merge dengan initialData agar field baru tidak undefined
-        // Ini solusi untuk error "changing an uncontrolled input to be controlled"
         const mergedData = { ...initialData, ...data };
         setFormData(mergedData);
         
         if (mergedData.originalPrice && mergedData.originalPrice !== "") {
           setIsDiscountActive(true);
         }
+      } else {
+        setError("Layanan tidak ditemukan.");
       }
     } catch (error) {
       console.error("Failed to load service", error);
+      setError("Gagal memuat data layanan. Periksa koneksi internet Anda.");
     } finally {
       setLoading(false);
     }
@@ -72,6 +77,8 @@ export default function ServiceFormPage() {
 
   // --- HELPER: FORMAT CURRENCY ---
   const formatRupiah = (value: string) => {
+    if (!value) return "";
+    
     const numberString = value.replace(/[^,\d]/g, "").toString();
     const split = numberString.split(",");
     const sisa = split[0].length % 3;
@@ -146,9 +153,9 @@ export default function ServiceFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     
     const dataToSave = { ...formData };
-    // Bersihkan data jika toggle dimatikan
     if (!isDiscountActive) {
       dataToSave.originalPrice = "";
       dataToSave.discountValue = 0;
@@ -161,17 +168,24 @@ export default function ServiceFormPage() {
       await saveService(dataToSave, isNew ? undefined : id);
       router.push("/admin/dashboard");
     } catch (err) {
-      alert("Failed to save service");
+      console.error("Error saving:", err);
+      setError("Gagal menyimpan layanan. Coba lagi nanti.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this service?")) {
+    if (confirm("Apakah Anda yakin ingin menghapus layanan ini?")) {
       setSaving(true);
-      await deleteService(id);
-      router.push("/admin/dashboard");
+      try {
+        await deleteService(id);
+        router.push("/admin/dashboard");
+      } catch (err) {
+        console.error("Error deleting:", err);
+        setError("Gagal menghapus layanan.");
+        setSaving(false);
+      }
     }
   };
 
@@ -193,7 +207,24 @@ export default function ServiceFormPage() {
     }));
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+
+  // Render error state
+  if (error) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
+          <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-xl text-center max-w-md">
+            <h3 className="text-xl font-bold text-red-400 mb-2">Terjadi Kesalahan</h3>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>
+              Kembali ke Dashboard
+            </Button>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute>
@@ -209,8 +240,8 @@ export default function ServiceFormPage() {
               </h1>
             </div>
             {!isNew && (
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                <Trash size={16} className="mr-2" /> Delete
+              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+                {saving ? <Loader2 className="animate-spin mr-2"/> : <Trash size={16} className="mr-2" />} Delete
               </Button>
             )}
           </div>
@@ -238,7 +269,12 @@ export default function ServiceFormPage() {
                 </p>
                 {formData.thumbnail && (
                   <div className="mt-2 relative h-48 w-full rounded-lg overflow-hidden border border-white/10 bg-black/40">
-                    <img src={formData.thumbnail} alt="Preview" className="w-full h-full object-contain" />
+                    <img 
+                      src={formData.thumbnail} 
+                      alt="Preview" 
+                      className="w-full h-full object-contain"
+                      onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
+                    />
                   </div>
                 )}
               </div>
@@ -262,13 +298,12 @@ export default function ServiceFormPage() {
               </div>
             </section>
 
-            {/* --- PRICING & PROMOTION (AUTO CALC) --- */}
+            {/* --- PRICING & PROMOTION --- */}
             <section className="space-y-4 bg-secondary/5 p-6 rounded-xl border border-white/5">
               <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-4">
                 <h3 className="text-lg font-bold flex items-center gap-2"><Calculator size={18}/> Pricing Calculator</h3>
               </div>
               
-              {/* Basic Info (Tampil JIKA Flash Sale MATI) */}
               {!formData.isFlashSale && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
                   <div className="space-y-2">
@@ -333,7 +368,7 @@ export default function ServiceFormPage() {
                 )}
               </div>
 
-              {/* 2. Toggle Flash Sale (Tampilan Khusus) */}
+              {/* 2. Toggle Flash Sale */}
               <div className="bg-black/20 p-4 rounded-xl border border-white/5 mt-2 transition-all">
                 <div className="flex items-center gap-2 mb-4">
                   <input 
@@ -350,7 +385,6 @@ export default function ServiceFormPage() {
                 {formData.isFlashSale && (
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2 pl-6 border-l-2 border-red-500/20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Input Harga Flash Sale (Pindah ke Sini) */}
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-red-300">Harga Flash Sale (IDR)</label>
                         <input 
@@ -363,7 +397,6 @@ export default function ServiceFormPage() {
                         <p className="text-xs text-red-300/60">Harga spesial ini yang akan tampil besar.</p>
                       </div>
 
-                      {/* Input Durasi Flash Sale (Baru) */}
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-red-300">Berakhir Pada (Durasi)</label>
                         <div className="relative">
@@ -378,7 +411,6 @@ export default function ServiceFormPage() {
                       </div>
                     </div>
                     
-                    {/* Input Estimasi Pengerjaan (Pindah ke Sini juga agar form tidak hilang) */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Estimasi Pengerjaan (Saat Flash Sale)</label>
                       <input required className="input-field" placeholder="e.g. 2-3 Hari Kerja"
