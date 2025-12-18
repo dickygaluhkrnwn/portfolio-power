@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Code2, Sparkles, BookOpen, Briefcase } from "lucide-react"; // Import Briefcase
+import { Menu, X, Code2, Sparkles, BookOpen, Briefcase, Download } from "lucide-react"; // Import Download icon
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,7 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "About", path: "/about" },
   { name: "Projects", path: "/projects" },
-  { name: "Services", path: "/services" }, // Menu Baru Ditambahkan
+  { name: "Services", path: "/services" },
   { name: "Blog", path: "/blog" },
   { name: "Contact", path: "/contact" },
 ];
@@ -20,6 +20,8 @@ const navItems = [
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // State untuk install prompt
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -27,8 +29,31 @@ export function Navbar() {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    // --- PWA Install Logic ---
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setShowInstallBtn(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   return (
     <>
@@ -62,7 +87,6 @@ export function Navbar() {
           {/* --- DESKTOP MENU --- */}
           <nav className="hidden md:flex items-center gap-1 bg-white/5 backdrop-blur-sm px-2 py-1 rounded-full border border-white/5">
             {navItems.map((item) => {
-              // Logic agar active state menyala di sub-halaman
               const isActive = item.path === "/" 
                 ? pathname === "/" 
                 : pathname.startsWith(item.path);
@@ -84,7 +108,6 @@ export function Navbar() {
                     />
                   )}
                   <span className="relative z-10 flex items-center gap-2">
-                    {/* Icon kecil di menu */}
                     {item.name === "Blog" && <BookOpen size={14} className="opacity-70" />}
                     {item.name === "Services" && <Briefcase size={14} className="opacity-70" />}
                     {item.name}
@@ -96,6 +119,17 @@ export function Navbar() {
 
           {/* --- RIGHT ACTION --- */}
           <div className="flex items-center gap-3">
+            {/* Install Button (Desktop) */}
+            {showInstallBtn && (
+              <Button
+                size="sm"
+                onClick={handleInstallClick}
+                className="hidden md:flex rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white border border-primary/20 transition-all animate-in fade-in zoom-in"
+              >
+                <Download size={14} className="mr-2" /> Install App
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
@@ -155,6 +189,25 @@ export function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+
+              {/* Install Button (Mobile Menu) */}
+              {showInstallBtn && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Button
+                    onClick={() => {
+                      handleInstallClick();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="mt-4 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-white border border-primary/20 transition-all text-lg px-8 py-6 h-auto"
+                  >
+                    <Download size={20} className="mr-3" /> Install App
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
