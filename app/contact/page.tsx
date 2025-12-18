@@ -15,7 +15,7 @@ const getIcon = (platform: string) => {
   const p = platform.toLowerCase();
   if (p.includes("github")) return <Github />;
   if (p.includes("linkedin")) return <Linkedin />;
-  if (p.includes("twitter")) return <Twitter />;
+  if (p.includes("twitter") || p.includes("x")) return <Twitter />;
   if (p.includes("facebook")) return <Facebook />;
   if (p.includes("instagram")) return <Instagram />;
   if (p.includes("youtube")) return <Youtube />;
@@ -67,35 +67,39 @@ export default function ContactPage() {
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      <div className="container-width pt-32 pb-20 relative z-10">
+      <div className="container px-4 sm:px-6 pt-24 pb-20 relative z-10 md:pt-32">
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-2xl mb-16"
+          className="max-w-2xl mb-12 md:mb-16"
         >
           <h1 className="font-heading text-4xl md:text-6xl font-bold mb-6">
             Let's <span className="text-gradient-primary">Connect.</span>
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
             Temukan saya di berbagai platform digital. Baik untuk kolaborasi profesional, 
             diskusi teknologi, atau sekadar berteman di sosial media.
           </p>
           
           <div className="mt-8 flex gap-4">
-             <Button size="lg" className="rounded-full" onClick={() => window.location.href = 'mailto:emailanda@example.com'}>
-                <Mail className="mr-2 h-4 w-4" /> Kirim Email
+             <Button 
+               size="lg" 
+               className="rounded-full h-12 px-8 text-base active:scale-95 transition-transform" 
+               onClick={() => window.location.href = 'mailto:dicky.galuh.kurniawan1@gmail.com'}
+             >
+                <Mail className="mr-2 h-5 w-5" /> Kirim Email
              </Button>
           </div>
         </motion.div>
 
         {loading ? (
-          <div className="flex gap-4 flex-wrap">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
              {[1,2,3].map(i => <div key={i} className="w-full h-24 bg-white/5 rounded-xl animate-pulse" />)}
           </div>
         ) : (
-          <div className="space-y-16">
+          <div className="space-y-12 md:space-y-16">
             
             {/* Professional Section */}
             {categories.professional.length > 0 && (
@@ -156,10 +160,10 @@ function SocialCard({ item }: { item: SocialLink }) {
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       className={`
-        flex items-center justify-between p-4 rounded-xl border backdrop-blur-sm
-        bg-gradient-to-br transition-all duration-300 group
+        flex items-center justify-between p-4 md:p-5 rounded-xl border backdrop-blur-sm
+        bg-gradient-to-br transition-all duration-300 group min-h-[72px]
         ${getCategoryColor(item.category)}
-        hover:border-white/20 hover:shadow-lg
+        hover:border-white/20 hover:shadow-lg cursor-pointer
       `}
     >
       <div className="flex items-center gap-4">

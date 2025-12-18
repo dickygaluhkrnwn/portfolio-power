@@ -33,14 +33,13 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       }),
     ],
     content: content,
-    // FIX: Tambahkan immediatelyRender: false untuk menghindari error SSR/Hydration
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editorProps: {
       attributes: {
-        class: "prose prose-invert max-w-none focus:outline-none min-h-[300px] p-4 text-gray-300",
+        class: "prose prose-invert max-w-none focus:outline-none min-h-[300px] p-4 text-gray-300 text-base md:text-lg leading-relaxed",
       },
     },
   });
@@ -70,74 +69,74 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   return (
     <div className="border border-white/10 rounded-xl overflow-hidden bg-black/20">
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-1 p-2 border-b border-white/10 bg-secondary/10">
+      <div className="flex flex-wrap items-center gap-1 p-2 border-b border-white/10 bg-secondary/10 sticky top-0 z-10">
         
         {/* Headings */}
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} 
           isActive={editor.isActive("heading", { level: 2 })}
-          icon={<Heading1 size={16} />}
+          icon={<Heading1 size={18} />}
         />
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} 
           isActive={editor.isActive("heading", { level: 3 })}
-          icon={<Heading2 size={16} />}
+          icon={<Heading2 size={18} />}
         />
         
-        <div className="w-px h-6 bg-white/10 mx-1 self-center" />
+        <div className="w-px h-6 bg-white/10 mx-1 self-center hidden sm:block" />
 
         {/* Basic Format */}
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleBold().run()} 
           isActive={editor.isActive("bold")}
-          icon={<Bold size={16} />}
+          icon={<Bold size={18} />}
         />
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleItalic().run()} 
           isActive={editor.isActive("italic")}
-          icon={<Italic size={16} />}
+          icon={<Italic size={18} />}
         />
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleCode().run()} 
           isActive={editor.isActive("code")}
-          icon={<Code size={16} />}
+          icon={<Code size={18} />}
         />
 
-        <div className="w-px h-6 bg-white/10 mx-1 self-center" />
+        <div className="w-px h-6 bg-white/10 mx-1 self-center hidden sm:block" />
 
         {/* Lists & Quote */}
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleBulletList().run()} 
           isActive={editor.isActive("bulletList")}
-          icon={<List size={16} />}
+          icon={<List size={18} />}
         />
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleOrderedList().run()} 
           isActive={editor.isActive("orderedList")}
-          icon={<ListOrdered size={16} />}
+          icon={<ListOrdered size={18} />}
         />
         <ToolbarBtn 
           onClick={() => editor.chain().focus().toggleBlockquote().run()} 
           isActive={editor.isActive("blockquote")}
-          icon={<Quote size={16} />}
+          icon={<Quote size={18} />}
         />
 
-        <div className="w-px h-6 bg-white/10 mx-1 self-center" />
+        <div className="w-px h-6 bg-white/10 mx-1 self-center hidden sm:block" />
 
         {/* Media */}
-        <ToolbarBtn onClick={setLink} isActive={editor.isActive("link")} icon={<LinkIcon size={16} />} />
-        <ToolbarBtn onClick={addImage} isActive={false} icon={<ImageIcon size={16} />} />
+        <ToolbarBtn onClick={setLink} isActive={editor.isActive("link")} icon={<LinkIcon size={18} />} />
+        <ToolbarBtn onClick={addImage} isActive={false} icon={<ImageIcon size={18} />} />
 
-        <div className="flex-grow" />
+        <div className="flex-grow hidden sm:block" />
 
         {/* History */}
-        <ToolbarBtn onClick={() => editor.chain().focus().undo().run()} isActive={false} icon={<Undo size={16} />} />
-        <ToolbarBtn onClick={() => editor.chain().focus().redo().run()} isActive={false} icon={<Redo size={16} />} />
+        <ToolbarBtn onClick={() => editor.chain().focus().undo().run()} isActive={false} icon={<Undo size={18} />} />
+        <ToolbarBtn onClick={() => editor.chain().focus().redo().run()} isActive={false} icon={<Redo size={18} />} />
 
       </div>
 
       {/* Editor Area */}
-      <EditorContent editor={editor} className="bg-black/10 min-h-[300px]" />
+      <EditorContent editor={editor} className="bg-black/10 min-h-[300px] cursor-text" />
     </div>
   );
 }
@@ -148,7 +147,7 @@ function ToolbarBtn({ onClick, isActive, icon }: any) {
       type="button"
       onClick={onClick}
       className={cn(
-        "p-2 rounded hover:bg-white/10 transition-colors text-muted-foreground hover:text-white",
+        "p-2.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-white active:scale-95 touch-manipulation", // Larger padding & touch feedback
         isActive && "bg-primary/20 text-primary"
       )}
     >

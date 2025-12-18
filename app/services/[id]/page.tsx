@@ -41,7 +41,7 @@ export default function ServiceDetailPage() {
 
   if (!service) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 text-center">
         <h1 className="text-2xl font-bold mb-4">Layanan Tidak Ditemukan</h1>
         <Button onClick={() => router.push("/services")}>Kembali ke Katalog</Button>
       </div>
@@ -60,28 +60,34 @@ export default function ServiceDetailPage() {
   const hasDiscount = Boolean(service.originalPrice && service.originalPrice !== "");
 
   return (
-    <main className="min-h-screen bg-background text-foreground pb-20">
+    <main className="min-h-screen bg-background text-foreground pb-20 relative overflow-hidden">
       <Navbar />
 
-      <div className="container-width pt-28 md:pt-32 relative z-10">
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/10 rounded-full blur-[80px] md:blur-[120px]" />
+        <div className="absolute bottom-[10%] right-[5%] w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-accent/5 rounded-full blur-[60px] md:blur-[100px]" />
+        <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      </div>
+
+      <div className="container-width pt-24 pb-16 md:pt-32 relative z-10">
         
         {/* Breadcrumb / Back */}
         <button 
           onClick={() => router.back()} 
-          className="flex items-center text-muted-foreground hover:text-white transition-colors mb-6 text-sm"
+          className="flex items-center text-muted-foreground hover:text-white transition-colors mb-6 text-sm pl-4 md:pl-0"
         >
           <ArrowLeft size={16} className="mr-2" /> Kembali ke Katalog
         </button>
 
         {/* Flash Sale Banner (Jika Aktif) */}
         {service.isFlashSale && (
-          <div className="mb-8 p-4 rounded-xl bg-gradient-to-r from-red-900/40 to-red-600/10 border border-red-500/30 flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-            <div className="p-2 bg-red-500 rounded-lg text-white animate-pulse">
+          <div className="mx-4 md:mx-0 mb-8 p-4 rounded-xl bg-gradient-to-r from-red-900/40 to-red-600/10 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-in fade-in slide-in-from-top-4">
+            <div className="p-2 bg-red-500 rounded-lg text-white animate-pulse shrink-0">
               <Zap size={20} fill="currentColor" />
             </div>
             <div>
-              <h3 className="font-bold text-red-100">Sedang Flash Sale!</h3>
-              <div className="flex items-center gap-2 text-sm text-red-300">
+              <h3 className="font-bold text-red-100 text-sm md:text-base">Sedang Flash Sale!</h3>
+              <div className="flex items-center gap-2 text-xs md:text-sm text-red-300 mt-1">
                 <Timer size={14} />
                 <span>Harga spesial ini akan berakhir segera. Amankan slot Anda sekarang.</span>
               </div>
@@ -89,10 +95,10 @@ export default function ServiceDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 px-4 md:px-0">
           
           {/* --- LEFT COLUMN: Images & Details --- */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
             
             {/* Product Image (Thumbnail) */}
             <div className="rounded-2xl overflow-hidden border border-white/10 bg-secondary/10 aspect-video relative group">
@@ -103,20 +109,20 @@ export default function ServiceDetailPage() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="flex items-center justify-center h-full text-muted-foreground bg-white/5">
                   No Image Available
                 </div>
               )}
               
               {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
+              <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2">
                 {service.recommended && (
-                  <div className="bg-primary text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg w-fit">
+                  <div className="bg-primary text-white px-2 py-1 md:px-3 rounded-full text-[10px] md:text-xs font-bold shadow-lg w-fit backdrop-blur-sm">
                     Recommended
                   </div>
                 )}
                 {hasDiscount && (
-                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg w-fit">
+                  <div className="bg-red-500 text-white px-2 py-1 md:px-3 rounded-full text-[10px] md:text-xs font-bold shadow-lg w-fit backdrop-blur-sm">
                     Hemat {service.discountValue}%
                   </div>
                 )}
@@ -124,21 +130,29 @@ export default function ServiceDetailPage() {
             </div>
 
             {/* Product Info Header (Mobile Only) */}
-            <div className="block lg:hidden space-y-4">
-              <h1 className="text-2xl font-heading font-bold">{service.title}</h1>
-              {hasDiscount ? (
+            <div className="block lg:hidden space-y-3">
+              <h1 className="text-2xl font-heading font-bold leading-tight">{service.title}</h1>
+              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-muted-foreground line-through text-sm">{service.originalPrice}</span>
-                  <div className="text-2xl font-bold text-red-500">{service.price}</div>
+                  {hasDiscount ? (
+                    <div>
+                      <span className="text-muted-foreground line-through text-xs md:text-sm">{service.originalPrice}</span>
+                      <div className="text-2xl font-bold text-red-500">{service.price}</div>
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold text-primary">{service.price}</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-2xl font-bold text-primary">{service.price}</div>
-              )}
+                <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded text-xs text-yellow-400">
+                   <Star size={12} fill="currentColor" /> 
+                   <span className="font-bold text-white">{service.rating || "New"}</span>
+                </div>
+              </div>
             </div>
 
             {/* Description Tab Style */}
-            <div className="bg-secondary/5 border border-white/5 rounded-2xl p-6 md:p-8">
-              <h2 className="text-xl font-bold font-heading mb-6 border-b border-white/10 pb-4">
+            <div className="bg-secondary/5 border border-white/5 rounded-2xl p-5 md:p-8">
+              <h2 className="text-lg md:text-xl font-bold font-heading mb-4 md:mb-6 border-b border-white/10 pb-4">
                 Deskripsi Layanan
               </h2>
               
@@ -149,15 +163,15 @@ export default function ServiceDetailPage() {
               />
 
               {/* Features List */}
-              <div className="mt-8 pt-8 border-t border-white/10">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <ShieldCheck className="text-green-400" size={20} /> Apa yang Anda Dapatkan:
+              <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-white/10">
+                <h3 className="text-base md:text-lg font-bold mb-4 flex items-center gap-2">
+                  <ShieldCheck className="text-green-400" size={18} /> Apa yang Anda Dapatkan:
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {service.features.map((feat, idx) => (
                     <div key={idx} className="flex items-start gap-3 bg-black/20 p-3 rounded-xl border border-white/5">
                       <CheckCircle size={16} className="text-primary mt-0.5 shrink-0" />
-                      <span className="text-sm">{feat}</span>
+                      <span className="text-sm text-muted-foreground">{feat}</span>
                     </div>
                   ))}
                 </div>
@@ -168,17 +182,17 @@ export default function ServiceDetailPage() {
 
           {/* --- RIGHT COLUMN: Sticky Action Card --- */}
           <div className="lg:col-span-1">
-            <div className="sticky top-28 space-y-6">
+            <div className="sticky top-24 md:top-28 space-y-6">
               
               {/* Main Action Card */}
               <div className={cn(
-                "bg-secondary/10 border rounded-2xl p-6 backdrop-blur-md shadow-2xl transition-all",
+                "bg-secondary/10 border rounded-2xl p-5 md:p-6 backdrop-blur-md shadow-2xl transition-all",
                 service.isFlashSale ? "border-red-500/30 shadow-red-500/5" : "border-white/10"
               )}>
                 
-                {/* Title & Stats */}
-                <div className="mb-6">
-                  <h1 className="text-2xl font-heading font-bold mb-2 hidden lg:block">{service.title}</h1>
+                {/* Title & Stats (Desktop Only) */}
+                <div className="hidden lg:block mb-6">
+                  <h1 className="text-2xl font-heading font-bold mb-2">{service.title}</h1>
                   
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
                     {(service.rating ?? 0) > 0 && (
@@ -221,24 +235,24 @@ export default function ServiceDetailPage() {
                 <div className="space-y-3">
                   <Button 
                     className={cn(
-                      "w-full h-12 text-base font-bold shadow-lg",
+                      "w-full h-11 md:h-12 text-sm md:text-base font-bold shadow-lg active:scale-95 transition-transform",
                       service.isFlashSale ? "bg-red-600 hover:bg-red-700 shadow-red-500/20 border-red-500" : "shadow-primary/20"
                     )}
                     onClick={handleOrder}
                   >
-                    <ShoppingCart className="mr-2 w-5 h-5" /> 
-                    {service.isFlashSale ? "Ambil Promo Sekarang" : "Order Sekarang"}
+                    <ShoppingCart className="mr-2 w-4 h-4 md:w-5 md:h-5" /> 
+                    {service.isFlashSale ? "Ambil Promo" : "Order Sekarang"}
                   </Button>
                   
                   <Button 
                     variant="outline" 
-                    className="w-full h-12 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
+                    className="w-full h-11 md:h-12 text-sm md:text-base border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors active:scale-95"
                     onClick={() => {
                         const phone = "6285904320201";
                         window.open(`https://wa.me/${phone}?text=Halo, mau tanya detail tentang ${service.title}`, "_blank");
                     }}
                   >
-                    <MessageSquare className="mr-2 w-5 h-5" /> Chat Konsultasi
+                    <MessageSquare className="mr-2 w-4 h-4 md:w-5 md:h-5" /> Chat Konsultasi
                   </Button>
                 </div>
 
@@ -263,7 +277,7 @@ export default function ServiceDetailPage() {
                     navigator.clipboard.writeText(window.location.href);
                     alert("Link produk disalin!");
                   }}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition-colors"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition-colors py-2 px-4 rounded-full hover:bg-white/5"
                 >
                   <Share2 size={16} /> Bagikan Paket Ini
                 </button>

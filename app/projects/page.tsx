@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
 import { ProjectCard } from "@/components/ui/project-card";
-import { Filter, Layers, Loader2 } from "lucide-react"; // Tambah Loader icon
+import { Filter, Layers, Loader2 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 
 // Import tipe data dan service
@@ -21,8 +21,8 @@ const categories = [
 
 export default function ProjectsPage() {
   const [filter, setFilter] = useState("all");
-  const [projects, setProjects] = useState<Project[]>([]); // State untuk data project
-  const [loading, setLoading] = useState(true); // State loading
+  const [projects, setProjects] = useState<Project[]>([]); 
+  const [loading, setLoading] = useState(true); 
   const router = useRouter();
 
   // Fetch data saat halaman dimuat
@@ -41,6 +41,7 @@ export default function ProjectsPage() {
 
   const handleProjectClick = (e: React.MouseEvent, id: number | string) => {
     const target = e.target as HTMLElement;
+    // Mencegah navigasi ganda jika yang diklik adalah tombol di dalam card
     if (target.closest("button") || target.closest("a")) {
       return;
     }
@@ -52,24 +53,25 @@ export default function ProjectsPage() {
       <Navbar />
 
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[10%] right-[10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[10%] left-[5%] w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
+        <div className="absolute top-[10%] right-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/10 rounded-full blur-[80px] md:blur-[120px]" />
+        <div className="absolute bottom-[10%] left-[5%] w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-accent/5 rounded-full blur-[60px] md:blur-[100px]" />
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      <div className="container-width pt-32 pb-20 relative z-10">
+      <div className="container-width pt-24 pb-16 md:pt-32 md:pb-20 relative z-10">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6 md:gap-8">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
+            className="w-full md:w-auto text-center md:text-left"
           >
-            <h1 className="font-heading text-4xl md:text-6xl font-bold mb-4">
+            <h1 className="font-heading text-3xl sm:text-4xl md:text-6xl font-bold mb-3 md:mb-4">
               Selected <span className="text-gradient-primary">Works.</span>
             </h1>
-            <p className="text-muted-foreground text-lg max-w-md">
+            <p className="text-muted-foreground text-base md:text-lg max-w-md mx-auto md:mx-0">
               Koleksi {loading ? "..." : projects.length}+ project terbaik yang mendemonstrasikan kemampuan memecahkan masalah kompleks.
             </p>
           </motion.div>
@@ -78,25 +80,25 @@ export default function ProjectsPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex flex-wrap gap-2 bg-secondary/30 p-1.5 rounded-full border border-white/5 backdrop-blur-sm"
+            className="w-full md:w-auto flex flex-wrap justify-center gap-2 bg-secondary/30 p-1.5 rounded-2xl md:rounded-full border border-white/5 backdrop-blur-sm"
           >
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setFilter(cat.id)}
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 relative",
+                  "px-4 py-2.5 md:py-2 rounded-xl md:rounded-full text-sm font-medium transition-all duration-300 relative flex-1 md:flex-none justify-center min-h-[44px] md:min-h-0 items-center",
                   filter === cat.id ? "text-white" : "text-muted-foreground hover:text-white"
                 )}
               >
                 {filter === cat.id && (
                   <motion.div
                     layoutId="project-filter"
-                    className="absolute inset-0 bg-primary shadow-lg shadow-primary/25 rounded-full"
+                    className="absolute inset-0 bg-primary shadow-lg shadow-primary/25 rounded-xl md:rounded-full"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <span className="relative z-10 flex items-center gap-2">
+                <span className="relative z-10 flex items-center gap-2 whitespace-nowrap">
                   {cat.id === "all" ? <Layers size={14} /> : <Filter size={14} />}
                   {cat.label}
                 </span>
@@ -107,7 +109,6 @@ export default function ProjectsPage() {
 
         {/* Content Section */}
         {loading ? (
-          // Loading Spinner
           <div className="flex justify-center items-center h-64">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
@@ -122,7 +123,7 @@ export default function ProjectsPage() {
                   layout
                   key={project.id} 
                   onClick={(e) => handleProjectClick(e, project.id)}
-                  className="block h-full cursor-pointer"
+                  className="block h-full cursor-pointer touch-manipulation"
                   whileHover={{ y: -5 }}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -137,7 +138,7 @@ export default function ProjectsPage() {
         )}
 
         {!loading && filteredProjects.length === 0 && (
-          <div className="text-center py-20 text-muted-foreground">
+          <div className="text-center py-20 text-muted-foreground bg-secondary/10 rounded-3xl border border-white/5">
             <p>Tidak ada project di kategori ini.</p>
           </div>
         )}

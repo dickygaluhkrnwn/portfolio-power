@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
-import { Button } from "@/components/ui/button";
 import { getAllServices } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
 import { 
@@ -58,28 +57,29 @@ export default function ServicesPage() {
 
       {/* Background FX */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[5%] right-[10%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[5%] left-[5%] w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px]" />
+        <div className="absolute top-[5%] right-[10%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-primary/5 rounded-full blur-[80px] md:blur-[120px]" />
+        <div className="absolute bottom-[5%] left-[5%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-accent/5 rounded-full blur-[60px] md:blur-[100px]" />
         <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      <div className="container-width pt-32 pb-20 relative z-10">
+      <div className="container-width pt-24 pb-16 md:pt-32 md:pb-20 relative z-10">
         
         {/* --- HEADER --- */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-8 md:mb-12 gap-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
+            className="w-full md:w-auto"
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm mb-4">
               <Sparkles size={14} className="text-primary" />
               <span className="text-xs font-medium text-primary uppercase tracking-wider">Digital Marketplace</span>
             </div>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4">
               Explore <span className="text-gradient-primary">Solutions.</span>
             </h1>
-            <p className="text-muted-foreground text-lg max-w-xl">
+            <p className="text-muted-foreground text-base md:text-lg max-w-xl">
               Temukan paket layanan yang tepat untuk kebutuhan digital Anda. Transparan, cepat, dan profesional.
             </p>
           </motion.div>
@@ -117,21 +117,21 @@ export default function ServicesPage() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-16"
+            className="mb-12 md:mb-16"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-red-500/20 rounded-lg text-red-500 animate-pulse">
                 <Zap size={24} fill="currentColor" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold font-heading text-white">Flash Sale Terbatas</h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                <h2 className="text-xl md:text-2xl font-bold font-heading text-white">Flash Sale Terbatas</h2>
+                <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mt-1">
                   <span>Jangan lewatkan penawaran spesial ini!</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 rounded-3xl bg-gradient-to-br from-red-900/20 to-transparent border border-red-500/20 relative overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 md:p-6 rounded-3xl bg-gradient-to-br from-red-900/20 to-transparent border border-red-500/20 relative overflow-hidden">
               {/* Background accent */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 blur-[80px] rounded-full pointer-events-none" />
               
@@ -147,15 +147,15 @@ export default function ServicesPage() {
           </motion.div>
         )}
 
-        {/* --- CATEGORY TABS --- */}
-        <div className="sticky top-24 z-30 mb-8 -mx-4 px-4 md:mx-0">
-          <div className="bg-background/80 backdrop-blur-xl border border-white/5 rounded-xl p-1.5 flex gap-1 overflow-x-auto scrollbar-hide md:w-fit">
+        {/* --- CATEGORY TABS (Scrollable) --- */}
+        <div className="sticky top-20 md:top-24 z-30 mb-8 -mx-4 px-4 md:mx-0">
+          <div className="bg-background/80 backdrop-blur-xl border border-white/5 rounded-xl p-1.5 flex gap-1 overflow-x-auto scrollbar-hide md:w-fit touch-pan-x">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+                  "px-4 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap min-h-[36px]",
                   activeCategory === cat.id 
                     ? "bg-primary text-white shadow-lg shadow-primary/25" 
                     : "text-muted-foreground hover:text-white hover:bg-white/5"
@@ -281,7 +281,7 @@ function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: S
     <div 
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer h-full border",
+        "group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer h-full border touch-manipulation",
         isFlashSaleView 
           ? "bg-black/40 border-red-500/30 hover:border-red-500 hover:shadow-xl hover:shadow-red-500/10"
           : "bg-secondary/10 border-white/5 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5"
@@ -333,8 +333,8 @@ function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: S
            <ProductCountdown targetDateStr={flashSaleEndDate} />
         )}
 
-        {/* Hover Action Overlay */}
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-[2px] z-30">
+        {/* Hover Action Overlay - Tampil default di mobile jika dibutuhkan, atau tetap on hover */}
+        <div className="hidden sm:flex absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 items-center justify-center gap-3 backdrop-blur-[2px] z-30">
           <button className="p-2 rounded-full bg-white text-black hover:scale-110 transition-transform" title="Lihat Detail">
             <Eye size={20} />
           </button>
@@ -358,7 +358,7 @@ function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: S
         </div>
 
         {/* Title */}
-        <h3 className="font-bold text-base text-foreground mb-1 leading-snug line-clamp-2 group-hover:text-primary transition-colors min-h-[40px]">
+        <h3 className="font-bold text-sm sm:text-base text-foreground mb-1 leading-snug line-clamp-2 group-hover:text-primary transition-colors min-h-[36px] sm:min-h-[40px]">
           {item.title}
         </h3>
 
@@ -375,7 +375,7 @@ function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: S
                 {item.originalPrice}
               </span>
               <div className="flex items-center gap-2">
-                <span className={cn("text-lg font-bold", isFlashSaleView ? "text-red-400" : "text-orange-400")}>
+                <span className={cn("text-base sm:text-lg font-bold", isFlashSaleView ? "text-red-400" : "text-orange-400")}>
                   {item.price}
                 </span>
               </div>
@@ -383,7 +383,7 @@ function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: S
           ) : (
             <div>
               <p className="text-[10px] text-muted-foreground">Mulai dari</p>
-              <p className="text-lg font-bold text-foreground">{item.price}</p>
+              <p className="text-base sm:text-lg font-bold text-foreground">{item.price}</p>
             </div>
           )}
         </div>
@@ -396,7 +396,7 @@ function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: S
           
           <button 
             className={cn(
-              "p-2 rounded-lg transition-colors",
+              "p-2 rounded-lg transition-colors active:scale-95",
               isFlashSaleView 
                 ? "bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white"
                 : "bg-primary/10 text-primary hover:bg-primary hover:text-white"

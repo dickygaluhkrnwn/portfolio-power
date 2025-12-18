@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Send, User, Bot, Loader2, Sparkles } from "lucide-react"; // Hapus MessageSquareText, gunakan Bot
+import { X, Send, User, Bot } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -15,7 +15,7 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Halo! Saya adalah asisten digital Dicky. Ada yang bisa saya bantu jelaskan mengenai pengalaman atau proyek Dicky?",
+      content: "Halo! Saya adalah asisten digital Iky. Ada yang bisa saya bantu jelaskan mengenai pengalaman atau proyek Iky?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -227,25 +227,31 @@ export function ChatWidget() {
       {/* Jendela Chat */}
       <div
         className={cn(
-          "fixed bottom-24 right-4 z-50 w-[90vw] max-w-[400px] rounded-xl border bg-background shadow-2xl transition-all duration-300 ease-in-out sm:right-8 sm:bottom-28",
+          // FASE FIX POSISI: bottom-24 diganti bottom-4 untuk mobile karena command trigger sudah dihapus
+          "fixed bottom-4 right-4 z-50 w-[90vw] max-w-[400px] h-[500px] max-h-[80vh] flex flex-col rounded-xl border bg-background shadow-2xl transition-all duration-300 ease-in-out sm:right-8 sm:bottom-28",
           isOpen
             ? "translate-y-0 opacity-100 scale-100"
             : "translate-y-10 opacity-0 scale-95 pointer-events-none"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b p-4 bg-muted/30 rounded-t-xl backdrop-blur-sm">
+        <div className="flex-none flex items-center justify-between border-b p-4 bg-muted/30 rounded-t-xl backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            {/* Logo AI: Diganti ke Bot Icon agar lebih jelas */}
+            {/* Logo AI: Bot Icon dengan Gradient */}
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-purple-500 shadow-sm border border-white/20">
               <Bot className="h-5 w-5 text-white fill-white/20" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm">Dicky's AI Assistant</h3>
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Powered by Gemini
-              </p>
+              <h3 className="font-semibold text-sm">Iky's AI Assistant</h3>
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <p className="text-[10px] text-muted-foreground">
+                  Online
+                </p>
+              </div>
             </div>
           </div>
           <Button
@@ -258,13 +264,13 @@ export function ChatWidget() {
           </Button>
         </div>
 
-        {/* Area Pesan */}
-        <div className="flex h-[400px] flex-col overflow-y-auto p-4 gap-6 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+        {/* Area Pesan: FASE 2 FIX -> Menggunakan flex-1 dan min-h-0 agar scroll berfungsi dalam flex container */}
+        <div className="flex-1 flex flex-col overflow-y-auto p-4 gap-6 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent min-h-0">
           {messages.map((msg, index) => (
             <div
               key={index}
               className={cn(
-                "flex w-max max-w-[90%] flex-col gap-1", // Diperlebar sedikit agar tabel muat
+                "flex w-max max-w-[90%] flex-col gap-1", 
                 msg.role === "user" ? "ml-auto items-end" : "items-start"
               )}
             >
@@ -284,7 +290,7 @@ export function ChatWidget() {
               
               <div
                 className={cn(
-                  "rounded-2xl px-4 py-3 text-sm shadow-sm overflow-hidden", // Overflow hidden penting untuk tabel
+                  "rounded-2xl px-4 py-3 text-sm shadow-sm overflow-hidden", 
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground rounded-tr-sm"
                     : "bg-muted/50 border border-muted-foreground/10 text-foreground rounded-tl-sm w-full"
@@ -311,7 +317,7 @@ export function ChatWidget() {
         </div>
 
         {/* Input Form */}
-        <div className="border-t p-3 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-b-xl">
+        <div className="flex-none border-t p-3 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-b-xl">
           <form onSubmit={handleSubmit} className="flex gap-2 items-end">
             <textarea
               className="flex-1 min-h-[44px] max-h-[120px] bg-muted/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none scrollbar-hide"
@@ -344,13 +350,14 @@ export function ChatWidget() {
       <Button
         size="lg"
         className={cn(
-          "fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-xl transition-all duration-500 z-40 sm:right-8 hover:scale-105 hover:shadow-2xl hover:bg-primary/90",
-          isOpen ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"
+          // FASE FIX POSISI: bottom-24 diganti bottom-4 untuk mobile
+          "fixed bottom-4 right-4 h-14 w-auto px-5 rounded-full shadow-xl transition-all duration-500 z-40 sm:right-8 hover:scale-105 hover:shadow-2xl bg-gradient-to-tr from-primary to-purple-500 border border-white/20 flex items-center gap-2",
+          isOpen ? "translate-y-20 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
         )}
         onClick={() => setIsOpen(true)}
       >
-        <Bot className="h-8 w-8" />
-        <span className="sr-only">Buka Chat AI</span>
+        <Bot className="h-7 w-7 text-white fill-white/20" />
+        <span className="font-semibold text-white whitespace-nowrap">Iky's AI</span>
       </Button>
     </>
   );

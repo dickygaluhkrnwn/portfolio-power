@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger";
 import { AuthProvider } from "@/lib/auth-context";
-import { Analytics } from "@vercel/analytics/react"; // Import Vercel Analytics
-import { ChatWidget } from "@/components/ai/chat-widget"; // Import Widget AI
+import { Analytics } from "@vercel/analytics/react"; 
+import { ChatWidget } from "@/components/ai/chat-widget";
 
 // Font Setup
 const inter = Inter({
@@ -21,7 +21,7 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
-// --- SEO CONFIGURATION ---
+// --- SEO & PWA CONFIGURATION ---
 export const metadata: Metadata = {
   title: {
     default: "Dicky Galuh Kurniawan | Full Stack Developer",
@@ -29,8 +29,9 @@ export const metadata: Metadata = {
   },
   description: "Portofolio resmi Dicky Galuh Kurniawan (Iky). Full Stack Developer yang fokus membangun aplikasi web modern, cepat, dan user-friendly.",
   keywords: ["Dicky Galuh Kurniawan", "Iky", "Full Stack Developer", "Next.js", "React", "Web Developer Indonesia", "Portfolio"],
-  authors: [{ name: "Dicky Galuh Kurniawan", url: "https://dickygaluh.com" }], // Ganti URL domain nanti
+  authors: [{ name: "Dicky Galuh Kurniawan", url: "https://dickygaluh.com" }],
   creator: "Dicky Galuh Kurniawan",
+  manifest: "/manifest.json", // Link ke manifest
   openGraph: {
     type: "website",
     locale: "id_ID",
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
     siteName: "Iky Portfolio",
     images: [
       {
-        url: "/og-image.jpg", // Nanti bisa diganti link Imgur cover
+        url: "/og-image.jpg", 
         width: 1200,
         height: 630,
         alt: "Dicky Galuh Kurniawan Portfolio",
@@ -52,20 +53,27 @@ export const metadata: Metadata = {
     title: "Dicky Galuh Kurniawan | Full Stack Developer",
     description: "Membangun solusi web modern dengan teknologi terkini.",
     images: ["/og-image.jpg"], 
-    creator: "@iky_username", // Ganti username sosmed
+    creator: "@iky_username",
   },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    apple: "/logo-app.svg", // Menggunakan logo baru untuk sementara
+  },
+  // Konfigurasi khusus Apple Device agar terasa seperti Native App
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Iky Portfolio",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#0a0a0a", // Warna bar browser di HP menyatu dengan background
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false, // Mencegah zoom in/out yang tidak sengaja (App-like feel)
 };
 
 export default function RootLayout({
@@ -85,9 +93,9 @@ export default function RootLayout({
         <AuthProvider>
           <CommandPalette />
           {children}
-          <Analytics /> {/* Komponen Analytics ditambahkan di sini */}
+          <Analytics />
           <CommandMenuTrigger />
-          <ChatWidget /> {/* Widget AI ditambahkan di sini agar muncul global */}
+          <ChatWidget />
         </AuthProvider>
       </body>
     </html>

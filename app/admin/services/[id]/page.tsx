@@ -4,9 +4,11 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Loader2, Trash, Plus, X, Image as ImageIcon, Zap, Percent, Calculator, Clock } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash, Plus, X, Image as ImageIcon, Zap, Percent, Calculator, Clock, Check } from "lucide-react";
 import { getServiceById, saveService, deleteService } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
+import TiptapEditor from "@/components/ui/tiptap-editor";
+import { cn } from "@/lib/utils";
 
 // Kita extend tipe data ServicePackage untuk mengakomodasi field baru sementara
 type ExtendedServicePackage = Partial<ServicePackage> & {
@@ -43,7 +45,7 @@ export default function ServiceFormPage() {
   const [isDiscountActive, setIsDiscountActive] = useState(false); 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null); // State error baru
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isNew && id) {
@@ -209,7 +211,6 @@ export default function ServiceFormPage() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
 
-  // Render error state
   if (error) {
     return (
       <ProtectedRoute>
@@ -228,36 +229,40 @@ export default function ServiceFormPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground pb-20">
-        <header className="border-b border-white/10 bg-secondary/5 backdrop-blur sticky top-0 z-50">
-          <div className="container-width py-4 flex items-center justify-between">
+      <div className="min-h-screen bg-background text-foreground pb-24 md:pb-20">
+        
+        {/* Sticky Header */}
+        <header className="border-b border-white/10 bg-background/80 backdrop-blur sticky top-0 z-50">
+          <div className="container-width py-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/admin/dashboard")}>
+              <Button variant="ghost" size="icon" onClick={() => router.push("/admin/dashboard")} className="hover:bg-white/10">
                 <ArrowLeft size={20} />
               </Button>
-              <h1 className="font-heading text-xl font-bold">
+              <h1 className="font-heading text-lg md:text-xl font-bold truncate">
                 {isNew ? "Add Product Service" : "Edit Product Service"}
               </h1>
             </div>
             {!isNew && (
-              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
-                {saving ? <Loader2 className="animate-spin mr-2"/> : <Trash size={16} className="mr-2" />} Delete
-              </Button>
+              <div className="hidden md:block">
+                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+                  {saving ? <Loader2 className="animate-spin mr-2"/> : <Trash size={16} className="mr-2" />} Delete
+                </Button>
+              </div>
             )}
           </div>
         </header>
 
-        <main className="container-width py-8 max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-8">
+        <main className="container-width py-6 md:py-8 max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
             
             {/* --- VISUAL & BASIC INFO --- */}
-            <section className="space-y-4 bg-secondary/5 p-6 rounded-xl border border-white/5">
-              <h3 className="text-lg font-bold border-b border-white/10 pb-2 mb-4 flex items-center gap-2">
-                <ImageIcon size={18} /> Visual & Info Utama
+            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 space-y-6">
+              <h3 className="text-lg font-bold border-b border-white/10 pb-3 mb-2 flex items-center gap-2">
+                <ImageIcon size={20} className="text-accent" /> Visual & Info Utama
               </h3>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Thumbnail URL (Imgur)</label>
+              <div className="space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Thumbnail URL (Imgur)</label>
                 <input 
                   className="input-field" 
                   placeholder="https://i.imgur.com/..."
@@ -268,27 +273,27 @@ export default function ServiceFormPage() {
                   * Disarankan rasio 1:1 (Square) atau 4:3. Minimal 500x500px agar tajam.
                 </p>
                 {formData.thumbnail && (
-                  <div className="mt-2 relative h-48 w-full rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                  <div className="mt-2 relative h-48 w-full rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-lg">
                     <img 
                       src={formData.thumbnail} 
                       alt="Preview" 
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                       onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
                     />
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Product Title</label>
-                  <input required className="input-field font-bold" placeholder="e.g. Landing Page UMKM"
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Product Title</label>
+                  <input required className="input-field font-bold text-lg" placeholder="e.g. Landing Page UMKM"
                     value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
-                  <select className="input-field" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value as any})}>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Category</label>
+                  <select className="input-field h-12" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value as any})}>
                     <option value="frontend">Frontend</option>
                     <option value="backend">Backend</option>
                     <option value="fullstack">Fullstack</option>
@@ -299,15 +304,15 @@ export default function ServiceFormPage() {
             </section>
 
             {/* --- PRICING & PROMOTION --- */}
-            <section className="space-y-4 bg-secondary/5 p-6 rounded-xl border border-white/5">
-              <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-4">
-                <h3 className="text-lg font-bold flex items-center gap-2"><Calculator size={18}/> Pricing Calculator</h3>
-              </div>
+            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 space-y-6">
+              <h3 className="text-lg font-bold border-b border-white/10 pb-3 mb-2 flex items-center gap-2">
+                <Calculator size={20} className="text-primary" /> Pricing & Promo
+              </h3>
               
               {!formData.isFlashSale && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-primary">Harga Jual (Final Price)</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-primary ml-1">Harga Jual (Final Price)</label>
                     <input 
                       required 
                       className="input-field text-lg text-primary font-bold border-primary/30" 
@@ -318,7 +323,7 @@ export default function ServiceFormPage() {
                     <p className="text-xs text-muted-foreground">Harga ini yang akan dibayar klien.</p>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Estimasi Pengerjaan</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Estimasi Pengerjaan</label>
                     <input required className="input-field" placeholder="e.g. 2-3 Hari Kerja"
                       value={formData.duration || ""} onChange={e => setFormData({...formData, duration: e.target.value})} 
                     />
@@ -327,33 +332,32 @@ export default function ServiceFormPage() {
               )}
 
               {/* 1. Toggle Diskon */}
-              <div className="bg-black/20 p-4 rounded-xl border border-white/5 mt-4 space-y-4 transition-all">
+              <div className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-4 transition-all">
                 <div className="flex items-center gap-2">
                   <input 
                     type="checkbox" id="activeDiscount" 
-                    className="w-4 h-4 rounded bg-black/20 border-white/10 text-orange-500 focus:ring-orange-500"
+                    className="w-5 h-5 rounded bg-black/20 border-white/10 text-orange-500 focus:ring-orange-500"
                     checked={isDiscountActive}
                     onChange={e => setIsDiscountActive(e.target.checked)}
                   />
-                  <label htmlFor="activeDiscount" className="text-sm font-bold text-orange-400 cursor-pointer select-none flex items-center gap-1">
-                    <Percent size={14} /> Aktifkan Diskon (Coret Harga)
+                  <label htmlFor="activeDiscount" className="text-sm font-bold text-orange-400 cursor-pointer select-none flex items-center gap-2">
+                    <Percent size={16} /> Aktifkan Diskon (Coret Harga)
                   </label>
                 </div>
 
                 {isDiscountActive && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 pl-6 border-l-2 border-orange-500/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-2 pl-4 border-l-2 border-orange-500/20">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-orange-200">Harga Asli (Sebelum Diskon)</label>
+                      <label className="text-xs font-bold text-orange-200 uppercase tracking-wider">Harga Asli (Sebelum Diskon)</label>
                       <input 
                         className="input-field border-orange-500/30 focus:border-orange-500" 
                         placeholder="e.g. Rp 2.000.000"
                         value={formData.originalPrice || ""} 
                         onChange={handleOriginalPriceChange} 
                       />
-                      <p className="text-xs text-muted-foreground">Harga dicoret.</p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-orange-200">Besar Diskon (%)</label>
+                      <label className="text-xs font-bold text-orange-200 uppercase tracking-wider">Besar Diskon (%)</label>
                       <input 
                         type="number" 
                         min="0" max="100"
@@ -362,31 +366,30 @@ export default function ServiceFormPage() {
                         value={formData.discountValue || 0} 
                         onChange={handleDiscountChange} 
                       />
-                      <p className="text-xs text-muted-foreground">Otomatis hitung harga jual.</p>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* 2. Toggle Flash Sale */}
-              <div className="bg-black/20 p-4 rounded-xl border border-white/5 mt-2 transition-all">
+              <div className="bg-black/20 p-4 rounded-xl border border-white/5 transition-all">
                 <div className="flex items-center gap-2 mb-4">
                   <input 
                     type="checkbox" id="flashSale" 
-                    className="w-4 h-4 rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500"
+                    className="w-5 h-5 rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500"
                     checked={!!formData.isFlashSale}
                     onChange={e => setFormData({...formData, isFlashSale: e.target.checked})}
                   />
-                  <label htmlFor="flashSale" className="text-sm font-bold text-red-400 cursor-pointer select-none flex items-center gap-1">
-                    <Zap size={14} /> Aktifkan Flash Sale
+                  <label htmlFor="flashSale" className="text-sm font-bold text-red-400 cursor-pointer select-none flex items-center gap-2">
+                    <Zap size={16} /> Aktifkan Flash Sale
                   </label>
                 </div>
 
                 {formData.isFlashSale && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 pl-6 border-l-2 border-red-500/20">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-5 animate-in fade-in slide-in-from-top-2 pl-4 border-l-2 border-red-500/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-red-300">Harga Flash Sale (IDR)</label>
+                        <label className="text-xs font-bold text-red-300 uppercase tracking-wider">Harga Flash Sale (IDR)</label>
                         <input 
                           required 
                           className="input-field text-lg text-red-400 font-bold border-red-500/30 focus:border-red-500 bg-red-950/20" 
@@ -394,11 +397,10 @@ export default function ServiceFormPage() {
                           value={formData.price || ""} 
                           onChange={handlePriceChange} 
                         />
-                        <p className="text-xs text-red-300/60">Harga spesial ini yang akan tampil besar.</p>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-red-300">Berakhir Pada (Durasi)</label>
+                        <label className="text-xs font-bold text-red-300 uppercase tracking-wider">Berakhir Pada (Durasi)</label>
                         <div className="relative">
                           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-red-400 w-4 h-4" />
                           <input 
@@ -412,7 +414,7 @@ export default function ServiceFormPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Estimasi Pengerjaan (Saat Flash Sale)</label>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Estimasi Pengerjaan (Flash Sale)</label>
                       <input required className="input-field" placeholder="e.g. 2-3 Hari Kerja"
                         value={formData.duration || ""} onChange={e => setFormData({...formData, duration: e.target.value})} 
                       />
@@ -422,15 +424,15 @@ export default function ServiceFormPage() {
               </div>
 
               {/* Rating & Sales */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 mt-4">
+              <div className="grid grid-cols-2 gap-5 pt-4 border-t border-white/5 mt-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Rating (0-5)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Rating (0-5)</label>
                   <input type="number" step="0.1" min="0" max="5" className="input-field" 
                     value={formData.rating || 0} onChange={e => setFormData({...formData, rating: parseFloat(e.target.value)})} 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Total Sales</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Total Sales</label>
                   <input type="number" min="0" className="input-field" 
                     value={formData.sales || 0} onChange={e => setFormData({...formData, sales: parseInt(e.target.value)})} 
                   />
@@ -439,43 +441,45 @@ export default function ServiceFormPage() {
             </section>
 
             {/* --- DETAILS --- */}
-            <section className="space-y-4 bg-secondary/5 p-6 rounded-xl border border-white/5">
-              <h3 className="text-lg font-bold border-b border-white/10 pb-2 mb-4">Product Details</h3>
+            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 space-y-6">
+              <h3 className="text-lg font-bold border-b border-white/10 pb-3 mb-2">Product Details</h3>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Short Description (For Card)</label>
-                <textarea required className="input-field min-h-[80px]" placeholder="Deskripsi singkat max 2 kalimat..."
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Short Description (For Card)</label>
+                <textarea required className="input-field min-h-[100px] leading-relaxed" placeholder="Deskripsi singkat max 2 kalimat..."
                   value={formData.shortDesc || ""} onChange={e => setFormData({...formData, shortDesc: e.target.value})} 
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Full Description (HTML/Rich Text)</label>
-                <textarea required className="input-field min-h-[150px] font-mono text-sm" placeholder="<p>Deskripsi lengkap...</p>"
-                  value={formData.description || ""} onChange={e => setFormData({...formData, description: e.target.value})} 
-                />
-                <p className="text-xs text-muted-foreground">Bisa menggunakan tag HTML sederhana.</p>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Full Description (Rich Text)</label>
+                <div className="min-h-[200px]">
+                  <TiptapEditor 
+                    content={formData.description || ""} 
+                    onChange={(html) => setFormData({...formData, description: html})} 
+                  />
+                </div>
               </div>
 
               <div className="space-y-3 border-t border-white/10 pt-4 mt-4">
-                <label className="text-sm font-medium">Features List (Bullet Points)</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Features List</label>
                 <div className="flex gap-2">
                   <input 
                     className="input-field" 
                     placeholder="Add feature..."
                     value={featureInput} 
-                    onChange={e => setFeatureInput(e.target.value)}
+                    onChange={e => setFeatureInput(e.target.value)} 
                     onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFeature())}
                   />
-                  <Button type="button" onClick={addFeature} variant="secondary"><Plus size={18}/></Button>
+                  <Button type="button" onClick={addFeature} variant="secondary" className="px-3"><Plus size={18}/></Button>
                 </div>
                 
                 <div className="space-y-2 mt-2">
                   {formData.features?.map((feat, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-black/20 p-2 rounded px-3 text-sm border border-white/5">
-                      <span>{feat}</span>
-                      <button type="button" onClick={() => removeFeature(idx)} className="text-red-400 hover:text-red-300">
-                        <X size={14} />
+                    <div key={idx} className="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5 group">
+                      <span className="text-sm">{feat}</span>
+                      <button type="button" onClick={() => removeFeature(idx)} className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors">
+                        <X size={16} />
                       </button>
                     </div>
                   ))}
@@ -484,22 +488,38 @@ export default function ServiceFormPage() {
             </section>
 
             {/* --- STATUS --- */}
-            <section className="bg-secondary/5 p-6 rounded-xl border border-white/5 flex justify-between items-center">
-              <div className="flex items-center gap-2">
+            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <input 
                   type="checkbox" id="rec" 
                   className="w-5 h-5 rounded bg-black/20 border-white/10 text-primary focus:ring-primary"
                   checked={!!formData.recommended}
                   onChange={e => setFormData({...formData, recommended: e.target.checked})}
                 />
-                <label htmlFor="rec" className="text-sm font-medium cursor-pointer select-none">Mark as Recommended</label>
+                <label htmlFor="rec" className="text-sm font-bold cursor-pointer select-none">Mark as Recommended</label>
               </div>
+            </section>
 
-              <Button type="submit" size="lg" className="shadow-xl shadow-primary/20" disabled={saving}>
+            {/* Mobile Sticky Action Bar */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur border-t border-white/10 z-40 flex gap-3">
+              {!isNew && (
+                <Button type="button" variant="destructive" size="lg" className="flex-1" onClick={handleDelete}>
+                  <Trash size={18} />
+                </Button>
+              )}
+              <Button type="submit" size="lg" className="flex-[3] shadow-xl shadow-primary/20" disabled={saving}>
                 {saving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
                 Save Product
               </Button>
-            </section>
+            </div>
+
+            {/* Desktop Submit Button */}
+            <div className="hidden md:flex justify-end pt-4">
+              <Button type="submit" size="lg" className="min-w-[150px] shadow-xl shadow-primary/20" disabled={saving}>
+                {saving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
+                Save Product
+              </Button>
+            </div>
 
           </form>
         </main>

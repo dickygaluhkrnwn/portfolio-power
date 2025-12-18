@@ -15,8 +15,9 @@ export function TechBadge({ name, icon, className, color = "#6366f1" }: TechBadg
   return (
     <motion.div
       whileHover={{ scale: 1.05, y: -2 }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        "relative flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/50 border border-white/5 cursor-default overflow-hidden group",
+        "relative flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl bg-secondary/50 border border-white/5 cursor-default overflow-hidden group select-none touch-manipulation",
         className
       )}
     >
@@ -26,11 +27,15 @@ export function TechBadge({ name, icon, className, color = "#6366f1" }: TechBadg
         style={{ background: `linear-gradient(to right, ${color}00, ${color})` }}
       />
       
-      {/* Icon */}
-      {icon && <span className="relative z-10 text-foreground/80 group-hover:text-white transition-colors">{icon}</span>}
+      {/* Icon - Responsif size */}
+      {icon && (
+        <span className="relative z-10 text-foreground/80 group-hover:text-white transition-colors scale-75 md:scale-100">
+          {icon}
+        </span>
+      )}
       
-      {/* Text */}
-      <span className="relative z-10 text-sm font-medium text-muted-foreground group-hover:text-white transition-colors">
+      {/* Text - Responsif size */}
+      <span className="relative z-10 text-xs md:text-sm font-medium text-muted-foreground group-hover:text-white transition-colors">
         {name}
       </span>
     </motion.div>
