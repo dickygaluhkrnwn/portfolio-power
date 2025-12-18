@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+// CommandMenuTrigger Desktop Only (sudah kita update sebelumnya)
+import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger"; 
 import { CommandPalette } from "@/components/ui/command-palette";
-import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger";
 import { AuthProvider } from "@/lib/auth-context";
 import { Analytics } from "@vercel/analytics/react"; 
 import { ChatWidget } from "@/components/ai/chat-widget";
@@ -25,7 +26,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: {
     default: "Dicky Galuh Kurniawan | Full Stack Developer",
-    template: "%s | Iky Portfolio",
+    template: "%s | IKY Dev.",
   },
   description: "Portofolio resmi Dicky Galuh Kurniawan (Iky). Full Stack Developer yang fokus membangun aplikasi web modern, cepat, dan user-friendly.",
   keywords: ["Dicky Galuh Kurniawan", "Iky", "Full Stack Developer", "Next.js", "React", "Web Developer Indonesia", "Portfolio"],
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
     url: "https://dickygaluh.com",
     title: "Dicky Galuh Kurniawan | Building Digital Masterpieces",
     description: "Lihat karya terbaik Iky dalam pengembangan web modern.",
-    siteName: "Iky Portfolio",
+    siteName: "IKY Dev.",
     images: [
       {
         url: "/og-image.jpg", 
@@ -58,13 +59,13 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
-    apple: "/logo-app.svg", // Menggunakan logo baru untuk sementara
+    apple: "/logo-app.svg", 
   },
   // Konfigurasi khusus Apple Device agar terasa seperti Native App
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Iky Portfolio",
+    title: "IKY Dev.", // Nama aplikasi di iOS Home Screen
   },
 };
 
