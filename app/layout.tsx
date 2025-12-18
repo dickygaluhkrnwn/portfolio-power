@@ -6,6 +6,7 @@ import { CommandPalette } from "@/components/ui/command-palette";
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger";
 import { AuthProvider } from "@/lib/auth-context";
 import { Analytics } from "@vercel/analytics/react"; // Import Vercel Analytics
+import { ChatWidget } from "@/components/ai/chat-widget"; // Import Widget AI
 
 // Font Setup
 const inter = Inter({
@@ -86,6 +87,7 @@ export default function RootLayout({
           {children}
           <Analytics /> {/* Komponen Analytics ditambahkan di sini */}
           <CommandMenuTrigger />
+          <ChatWidget /> {/* Widget AI ditambahkan di sini agar muncul global */}
         </AuthProvider>
       </body>
     </html>
