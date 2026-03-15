@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
@@ -8,11 +8,11 @@ import { getAllServices } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
 import { 
   Search, X, Loader2, Sparkles, Filter, 
-  Star, ShoppingCart, Heart, Eye, Zap, Timer 
+  Star, ShoppingCart, ArrowRight, Zap, Timer, CheckCircle2, ArrowDownUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Kategori (Update sesuai data baru)
+// Kategori Layanan
 const categories = [
   { id: "all", label: "Semua Produk" },
   { id: "frontend", label: "Frontend" },
@@ -26,9 +26,11 @@ export default function ServicesPage() {
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State Filter & Search
+  // State Filter, Search, Sort & Slider
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -40,187 +42,305 @@ export default function ServicesPage() {
   }, []);
 
   // Filter Logic: Flash Sale Items
-  const flashSaleItems = services.filter(s => s.isFlashSale);
+  const flashSaleItems = useMemo(() => services.filter(s => s.isFlashSale), [services]);
+
+  // Siapkan layanan untuk Hero Slider (Ambil 5 terbaik/rekomendasi)
+  const featuredServices = useMemo(() => {
+    const featured = services.filter(s => s.recommended || s.isFlashSale);
+    return featured.length > 0 ? featured.slice(0, 5) : services.slice(0, 5);
+  }, [services]);
+
+  // Auto-Slider Timer
+  useEffect(() => {
+    if (featuredServices.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredServices.length);
+    }, 5000); // Ganti slide setiap 5 detik
+    return () => clearInterval(timer);
+  }, [featuredServices.length]);
   
-  // Logic Filtering Utama
-  const filteredServices = services.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (item.shortDesc || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === "all" || item.category === activeCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+  // Logic Filtering & Sorting Utama
+  const filteredServices = useMemo(() => {
+    let result = services.filter((item) => {
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (item.shortDesc || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === "all" || item.category === activeCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+
+    // Terapkan Pengurutan
+    if (sortBy === "popular") {
+      result.sort((a, b) => (b.sales || 0) - (a.sales || 0));
+    } else {
+      // Default newest (asumsi data awal sudah berurut terbaru)
+      // Jika butuh sorting by date, bisa ditambahkan logic tanggal di sini
+    }
+
+    return result;
+  }, [services, searchQuery, activeCategory, sortBy]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground relative overflow-hidden">
+    <main className="min-h-screen bg-background text-foreground relative overflow-x-hidden selection:bg-primary/30 selection:text-white pb-24">
       <Navbar />
 
-      {/* Background FX */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[5%] right-[10%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-primary/5 rounded-full blur-[80px] md:blur-[120px]" />
-        <div className="absolute bottom-[5%] left-[5%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-accent/5 rounded-full blur-[60px] md:blur-[100px]" />
-        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      {/* --- BACKGROUND FX --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-clip">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="absolute top-[5%] right-[10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[150px] mix-blend-screen" />
+        <div className="absolute bottom-[10%] left-[-10%] w-[400px] h-[400px] bg-accent/5 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      <div className="container-width pt-24 pb-16 md:pt-32 md:pb-20 relative z-10">
+      <div className="relative z-10 w-full">
         
-        {/* --- HEADER --- */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-8 md:mb-12 gap-6">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="w-full md:w-auto"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm mb-4">
-              <Sparkles size={14} className="text-primary" />
-              <span className="text-xs font-medium text-primary uppercase tracking-wider">Digital Marketplace</span>
-            </div>
-            <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4">
-              Explore <span className="text-gradient-primary">Solutions.</span>
-            </h1>
-            <p className="text-muted-foreground text-base md:text-lg max-w-xl">
-              Temukan paket layanan yang tepat untuk kebutuhan digital Anda. Transparan, cepat, dan profesional.
-            </p>
-          </motion.div>
-
-          {/* Search Bar */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="w-full md:w-80 relative"
-          >
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 group-focus-within:text-primary transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Cari layanan..." 
-                className="w-full pl-10 pr-10 py-3 bg-secondary/10 border border-white/10 rounded-xl focus:outline-none focus:border-primary/50 transition-all text-sm backdrop-blur-sm focus:bg-secondary/20"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white p-1 hover:bg-white/10 rounded-full"
+        {/* --- 1. HERO FEATURED SLIDER (Marketplace Banner) --- */}
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 md:pt-32 mb-12">
+          {loading ? (
+            <div className="w-full h-[350px] md:h-[480px] bg-white/5 rounded-[2rem] animate-pulse border border-white/10" />
+          ) : featuredServices.length > 0 ? (
+            <div className="w-full h-[350px] md:h-[480px] relative rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group bg-[#050505]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0, scale: 1.02 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  className="absolute inset-0"
                 >
-                  <X size={14} />
-                </button>
-              )}
+                  <div 
+                    onClick={() => router.push(`/services/${featuredServices[currentSlide].id}`)} 
+                    className="block w-full h-full relative outline-none cursor-pointer"
+                  >
+                    {featuredServices[currentSlide].thumbnail ? (
+                      <img 
+                        src={featuredServices[currentSlide].thumbnail} 
+                        alt={featuredServices[currentSlide].title} 
+                        className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-105" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#0d1117] flex items-center justify-center">
+                        <Sparkles className="w-20 h-20 text-white/5" />
+                      </div>
+                    )}
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent opacity-95" />
+                    
+                    {/* Hero Content */}
+                    <div className="absolute bottom-0 left-0 w-full p-8 md:p-12 flex flex-col justify-end h-full">
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <span className="px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest backdrop-blur-md flex items-center gap-1.5">
+                          <Zap className="w-3 h-3 fill-primary" /> Sorotan
+                        </span>
+                        <span className="text-gray-300 text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-md bg-white/10 backdrop-blur-sm border border-white/5">
+                          {categories.find(c => c.id === featuredServices[currentSlide].category)?.label || featuredServices[currentSlide].category}
+                        </span>
+                      </div>
+                      <h2 className="text-white text-2xl md:text-4xl lg:text-5xl font-bold font-heading line-clamp-2 leading-tight mb-4 max-w-4xl group-hover:text-primary transition-colors">
+                        {featuredServices[currentSlide].title}
+                      </h2>
+                      <p className="text-gray-300 text-sm md:text-base line-clamp-2 max-w-2xl font-light">
+                        {featuredServices[currentSlide].shortDesc}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Slider Pagination Dots */}
+              <div className="absolute bottom-8 right-8 flex gap-2 z-20">
+                {featuredServices.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); setCurrentSlide(idx); }}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-500",
+                      idx === currentSlide ? "bg-primary w-8" : "bg-white/30 w-2 hover:bg-white/60"
+                    )}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
             </div>
-          </motion.div>
+          ) : null}
         </div>
 
-        {/* --- FLASH SALE SECTION --- */}
-        {!loading && flashSaleItems.length > 0 && activeCategory === "all" && !searchQuery && (
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
+          {/* --- 2. CONTROLS BAR (Search, Sort & Categories) --- */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-12 md:mb-16"
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl mb-12 flex flex-col gap-5 shadow-2xl relative z-20"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-red-500/20 rounded-lg text-red-500 animate-pulse">
-                <Zap size={24} fill="currentColor" />
+            {/* Top Row: Search & Sort */}
+            <div className="flex flex-col md:flex-row gap-4 items-center w-full">
+              {/* Search Bar (flex-1 agar mengisi ruang kosong) */}
+              <div className="relative w-full flex-1 group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 group-focus-within:text-primary transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Cari layanan, source code, atau template..." 
+                  className="w-full pl-11 pr-10 py-3 bg-[#050505]/50 border border-white/5 rounded-xl focus:outline-none focus:border-primary/50 transition-all text-sm text-white placeholder:text-gray-600"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white p-1.5 hover:bg-white/10 rounded-full transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold font-heading text-white">Flash Sale Terbatas</h2>
-                <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mt-1">
-                  <span>Jangan lewatkan penawaran spesial ini!</span>
-                </div>
+
+              {/* Sort Button (shrink-0 agar ukurannya solid dan menempel) */}
+              <div className="flex items-center shrink-0 w-full md:w-auto">
+                <button 
+                  onClick={() => setSortBy(prev => prev === "newest" ? "popular" : "newest")}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#050505]/50 border border-white/5 hover:border-white/20 hover:bg-white/5 transition-all text-sm text-gray-300 font-medium w-full md:w-auto"
+                >
+                  <ArrowDownUp className="w-4 h-4 text-gray-500" />
+                  {sortBy === "newest" ? "Terbaru" : "Terpopuler"}
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 md:p-6 rounded-3xl bg-gradient-to-br from-red-900/20 to-transparent border border-red-500/20 relative overflow-hidden">
-              {/* Background accent */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 blur-[80px] rounded-full pointer-events-none" />
-              
-              {flashSaleItems.map((item) => (
-                <ServiceMarketCard 
-                  key={item.id} 
-                  item={item} 
-                  onClick={() => router.push(`/services/${item.id}`)}
-                  isFlashSaleView={true}
-                />
+            {/* Bottom Row: Category Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full">
+              <Filter className="w-4 h-4 text-gray-600 shrink-0 mr-2" />
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={cn(
+                    "px-5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-all border",
+                    activeCategory === cat.id 
+                      ? "bg-primary text-white border-primary shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)]" 
+                      : "bg-transparent border-white/5 text-gray-500 hover:bg-white/5 hover:text-gray-300"
+                  )}
+                >
+                  {cat.label}
+                </button>
               ))}
             </div>
           </motion.div>
-        )}
 
-        {/* --- CATEGORY TABS (Scrollable) --- */}
-        <div className="sticky top-20 md:top-24 z-30 mb-8 -mx-4 px-4 md:mx-0">
-          <div className="bg-background/80 backdrop-blur-xl border border-white/5 rounded-xl p-1.5 flex gap-1 overflow-x-auto scrollbar-hide md:w-fit touch-pan-x">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap min-h-[36px]",
-                  activeCategory === cat.id 
-                    ? "bg-primary text-white shadow-lg shadow-primary/25" 
-                    : "text-muted-foreground hover:text-white hover:bg-white/5"
-                )}
+          {/* --- FLASH SALE SECTION --- */}
+          <AnimatePresence>
+            {!loading && flashSaleItems.length > 0 && activeCategory === "all" && !searchQuery && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: "auto", marginBottom: 64 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="overflow-hidden"
               >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
+                <div className="flex items-center gap-4 mb-6 px-2">
+                  <div className="p-2.5 bg-red-500/20 rounded-xl text-red-500 relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-red-500/30 rounded-xl blur-md animate-pulse" />
+                    <Zap size={24} fill="currentColor" className="relative z-10" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold font-heading text-white tracking-tight">Flash Sale Terbatas</h2>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Diskon gila-gilaan. Segera <b>checkout</b> sebelum waktu habis!
+                    </p>
+                  </div>
+                </div>
 
-        {/* --- PRODUCT GRID --- */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground animate-pulse">Memuat katalog...</p>
-          </div>
-        ) : (
-          <>
-            <motion.div 
-              layout
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-            >
-              <AnimatePresence mode="popLayout">
-                {filteredServices.map((item) => (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.3 }}
-                    key={item.id}
-                  >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6 rounded-[2rem] bg-[#0a0a0a] border border-red-500/20 relative shadow-2xl">
+                  {/* Background accent */}
+                  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-500/5 blur-[100px] rounded-full pointer-events-none" />
+                  
+                  {flashSaleItems.map((item) => (
                     <ServiceMarketCard 
+                      key={item.id} 
                       item={item} 
                       onClick={() => router.push(`/services/${item.id}`)}
+                      isFlashSaleView={true}
                     />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Empty State */}
-            {filteredServices.length === 0 && (
-              <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5">
-                <Filter size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-xl font-bold mb-2">Tidak ada layanan ditemukan</h3>
-                <p className="text-muted-foreground">Coba ganti kata kunci atau kategori lain.</p>
+          {/* --- PRODUCT GRID --- */}
+          <div className="w-full">
+            <div className="flex items-center justify-between mb-6 px-2">
+              <h2 className="text-xl font-bold font-heading text-white tracking-tight">
+                {activeCategory === "all" && !searchQuery 
+                  ? "Semua Layanan" 
+                  : searchQuery 
+                    ? "Hasil Pencarian" 
+                    : categories.find(c => c.id === activeCategory)?.label}
+              </h2>
+              <span className="text-sm font-mono text-gray-500 bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+                {filteredServices.length} Item
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className="h-[380px] bg-white/5 rounded-3xl animate-pulse border border-white/5" />
+                ))}
+              </div>
+            ) : filteredServices.length === 0 ? (
+              // Empty State
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-24 border border-dashed border-white/10 rounded-3xl bg-[#0a0a0a]/50 backdrop-blur-sm w-full"
+              >
+                <Filter className="w-12 h-12 mx-auto text-gray-600 mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">Layanan Tidak Ditemukan</h3>
+                <p className="text-gray-400 max-w-sm mx-auto text-sm">
+                  Coba gunakan kata kunci lain atau ubah filter kategori Anda.
+                </p>
                 <button 
                   onClick={() => {setSearchQuery(""); setActiveCategory("all");}}
-                  className="mt-6 text-primary text-sm font-medium hover:underline"
+                  className="mt-6 px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all"
                 >
                   Reset Semua Filter
                 </button>
-              </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                layout
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredServices.map((item) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.4, type: "spring", stiffness: 100, damping: 15 }}
+                      key={item.id}
+                      className="h-full"
+                    >
+                      <ServiceMarketCard 
+                        item={item} 
+                        onClick={() => router.push(`/services/${item.id}`)}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             )}
-          </>
-        )}
+          </div>
 
+        </div>
       </div>
     </main>
   );
 }
 
-// --- PRODUCT COUNTDOWN COMPONENT (NEW) ---
+// --- PRODUCT COUNTDOWN COMPONENT ---
 function ProductCountdown({ targetDateStr }: { targetDateStr: string }) {
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -244,7 +364,7 @@ function ProductCountdown({ targetDateStr }: { targetDateStr: string }) {
 
       // Format string
       if (days > 0) {
-        setTimeLeft(`${days}h ${hours}j ${minutes}m`);
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
       } else {
         const h = hours < 10 ? `0${hours}` : hours;
         const m = minutes < 10 ? `0${minutes}` : minutes;
@@ -253,7 +373,7 @@ function ProductCountdown({ targetDateStr }: { targetDateStr: string }) {
       }
     };
 
-    updateTimer(); // Initial call
+    updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [targetDateStr]);
@@ -261,153 +381,145 @@ function ProductCountdown({ targetDateStr }: { targetDateStr: string }) {
   if (!timeLeft || timeLeft === "EXPIRED") return null;
 
   return (
-    <div className="absolute bottom-3 left-3 right-3 bg-red-600/90 text-white text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-lg flex items-center justify-center gap-2 z-20 border border-red-400/30 animate-in fade-in">
-        <Timer size={12} className="animate-pulse" />
-        <span className="font-mono tracking-wide">{timeLeft}</span>
+    <div className="absolute bottom-3 left-3 bg-red-600/90 text-white text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-lg flex items-center justify-center gap-1.5 z-20 border border-red-400/30">
+        <Timer size={14} className="animate-pulse" />
+        <span className="font-mono tracking-widest">{timeLeft}</span>
     </div>
   );
 }
 
-// --- SUB-COMPONENT: MARKET CARD ---
+// --- SUB-COMPONENT: PREMIUM MARKET CARD ---
 function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: ServicePackage, onClick: () => void, isFlashSaleView?: boolean }) {
   const salesCount = item.sales ?? 0;
   const ratingValue = item.rating ?? 0;
   
   // Logic Diskon
   const hasDiscount = Boolean(item.originalPrice && item.originalPrice !== "");
-  const flashSaleEndDate = (item as any).flashSaleEndDate; // Ambil tanggal berakhir jika ada
+  const flashSaleEndDate = (item as any).flashSaleEndDate;
 
   return (
     <div 
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer h-full border touch-manipulation",
+        "group relative flex flex-col rounded-3xl overflow-hidden transition-all duration-500 cursor-pointer h-full bg-[#0a0a0a] border",
         isFlashSaleView 
-          ? "bg-black/40 border-red-500/30 hover:border-red-500 hover:shadow-xl hover:shadow-red-500/10"
-          : "bg-secondary/10 border-white/5 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5"
+          ? "border-red-500/20 hover:border-red-500/50 hover:shadow-[0_0_30px_-10px_rgba(239,68,68,0.2)]"
+          : "border-white/10 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_rgba(99,102,241,0.15)] hover:bg-[#111]"
       )}
     >
       {/* 1. Image Thumbnail Area */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-black/40">
+      <div className="relative aspect-[4/3] overflow-hidden bg-[#0d1117] border-b border-white/5 shrink-0">
         {item.thumbnail ? (
           <img 
             src={item.thumbnail} 
             alt={item.title} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground bg-white/5">
-            <Sparkles className="opacity-20" size={48}/>
+          <div className="flex items-center justify-center h-full text-white/5">
+            <Sparkles size={64}/>
           </div>
         )}
         
-        {/* Badges & Ribbons */}
-        <div className="absolute top-0 left-0 w-full p-3 flex justify-between items-start pointer-events-none z-10">
+        {/* Soft Gradient Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-60" />
+        
+        {/* Top Badges */}
+        <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10 pointer-events-none">
           <div className="flex flex-col gap-2">
             {item.recommended && !isFlashSaleView && (
-              <span className="bg-primary/90 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm shadow-lg w-fit">
-                Best Seller
+              <span className="bg-primary/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-sm shadow-lg w-fit flex items-center gap-1 uppercase tracking-wider border border-white/10">
+                <Star size={10} className="fill-white" /> Rekomendasi
               </span>
             )}
             {isFlashSaleView && (
-              <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm shadow-lg w-fit animate-pulse">
-                ⚡ Flash Sale
+              <span className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-sm shadow-lg w-fit animate-pulse flex items-center gap-1 uppercase tracking-wider border border-white/10">
+                <Zap size={10} className="fill-white" /> Flash Sale
               </span>
             )}
           </div>
 
-          {/* Discount Ribbon */}
+          {/* Discount Ribbon / Badge */}
           {hasDiscount && (
             <div className={cn(
-              "text-white text-xs font-bold px-2 py-1 rounded-bl-lg shadow-lg flex flex-col items-center leading-tight",
-              isFlashSaleView ? "bg-red-500" : "bg-orange-500"
+              "text-white text-xs font-bold px-2.5 py-1.5 rounded-md shadow-lg flex flex-col items-center leading-none border border-white/10",
+              isFlashSaleView ? "bg-red-500/90 backdrop-blur-md" : "bg-orange-500/90 backdrop-blur-md"
             )}>
-              <span>{item.discountValue}%</span>
-              <span className="text-[8px] uppercase">OFF</span>
+              <span className="text-sm">{item.discountValue}%</span>
+              <span className="text-[8px] uppercase tracking-widest mt-0.5">OFF</span>
             </div>
           )}
         </div>
 
-        {/* TIMER DI DALAM KARTU (Khusus Flash Sale View) */}
+        {/* Timer UI inside Image */}
         {isFlashSaleView && flashSaleEndDate && (
            <ProductCountdown targetDateStr={flashSaleEndDate} />
         )}
-
-        {/* Hover Action Overlay - Tampil default di mobile jika dibutuhkan, atau tetap on hover */}
-        <div className="hidden sm:flex absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 items-center justify-center gap-3 backdrop-blur-[2px] z-30">
-          <button className="p-2 rounded-full bg-white text-black hover:scale-110 transition-transform" title="Lihat Detail">
-            <Eye size={20} />
-          </button>
-          <button className="p-2 rounded-full bg-white/20 text-white hover:bg-primary hover:scale-110 transition-all" title="Simpan">
-            <Heart size={20} />
-          </button>
-        </div>
       </div>
 
       {/* 2. Content Details */}
-      <div className="p-4 flex flex-col flex-grow">
+      <div className="p-5 md:p-6 flex flex-col flex-grow relative z-10">
         
-        {/* Category & Rating */}
-        <div className="flex justify-between items-start mb-2">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium bg-white/5 px-2 py-0.5 rounded">
-            {item.category}
+        {/* Category & Stats */}
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+            {categories.find(c => c.id === item.category)?.label || item.category}
           </span>
-          <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold">
-            <Star size={12} fill="currentColor" /> {ratingValue > 0 ? ratingValue : "New"}
+          <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
+            <Star size={10} className="fill-yellow-400" /> {ratingValue > 0 ? ratingValue : "New"}
           </div>
         </div>
 
         {/* Title */}
-        <h3 className="font-bold text-sm sm:text-base text-foreground mb-1 leading-snug line-clamp-2 group-hover:text-primary transition-colors min-h-[36px] sm:min-h-[40px]">
+        <h3 className="font-heading font-bold text-lg text-white mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {item.title}
         </h3>
 
         {/* Short Desc */}
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-4 leading-relaxed">
-          {item.shortDesc || "Deskripsi singkat belum tersedia untuk layanan ini."}
+        <p className="text-sm text-gray-400 line-clamp-2 mb-6 leading-relaxed font-light flex-grow">
+          {item.shortDesc || "Layanan premium siap pakai untuk meningkatkan bisnis Anda."}
         </p>
 
-        {/* Price Section */}
-        <div className="mt-auto pt-2 mb-3">
-          {hasDiscount ? (
-            <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground line-through decoration-red-500/50">
-                {item.originalPrice}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className={cn("text-base sm:text-lg font-bold", isFlashSaleView ? "text-red-400" : "text-orange-400")}>
+        {/* Price & Action Section */}
+        <div className="mt-auto pt-4 border-t border-white/10 flex items-end justify-between">
+          <div className="flex flex-col">
+            {hasDiscount ? (
+              <>
+                <span className="text-xs text-gray-500 line-through decoration-red-500/50 mb-0.5">
+                  {item.originalPrice}
+                </span>
+                <span className={cn("text-xl font-bold font-mono tracking-tight", isFlashSaleView ? "text-red-400" : "text-white")}>
                   {item.price}
                 </span>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <p className="text-[10px] text-muted-foreground">Mulai dari</p>
-              <p className="text-base sm:text-lg font-bold text-foreground">{item.price}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Action Footer */}
-        <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
-            <span>{salesCount > 0 ? `${salesCount} Terjual` : "Baru Rilis"}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Mulai dari</span>
+                <span className="text-xl font-bold font-mono text-white tracking-tight">{item.price}</span>
+              </>
+            )}
           </div>
-          
+
           <button 
             className={cn(
-              "p-2 rounded-lg transition-colors active:scale-95",
+              "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
               isFlashSaleView 
-                ? "bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white"
-                : "bg-primary/10 text-primary hover:bg-primary hover:text-white"
+                ? "bg-red-500 text-white group-hover:shadow-[0_0_20px_-5px_rgba(239,68,68,0.5)]"
+                : "bg-white/5 text-gray-300 border border-white/10 group-hover:bg-primary group-hover:border-primary group-hover:text-white"
             )}
             onClick={(e) => {
               e.stopPropagation();
-              alert("Fitur Keranjang akan segera hadir!");
+              onClick(); // Sekarang cukup memanggil fungsi onClick dari props!
             }}
           >
-            <ShoppingCart size={18} />
+            {isFlashSaleView ? <ShoppingCart size={18} /> : <ArrowRight size={18} className="group-hover:-rotate-45 transition-transform" />}
           </button>
+        </div>
+
+        {/* Footer info (Sales) */}
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-gray-500 font-mono uppercase tracking-widest">
+          <CheckCircle2 size={12} className={salesCount > 0 ? "text-emerald-500" : "text-gray-600"} />
+          <span>{salesCount > 0 ? `${salesCount} Lisensi Terjual` : "Rilis Baru"}</span>
         </div>
 
       </div>

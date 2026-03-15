@@ -4,12 +4,13 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
-import { getServiceById } from "@/lib/services-service";
+import { getServiceById, getAllServices } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
 import { 
-  ArrowLeft, Clock, Star, Users, CheckCircle, 
-  MessageSquare, ShoppingCart, Share2, Loader2, ShieldCheck, Zap, Timer 
+  Clock, Star, Users, CheckCircle, 
+  MessageSquare, ShoppingCart, Share2, Loader2, ShieldCheck, Zap, Timer, Link as LinkIcon, CheckCircle2, Sparkles, ArrowRight
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export default function ServiceDetailPage() {
@@ -18,14 +19,28 @@ export default function ServiceDetailPage() {
   const id = params.id as string;
 
   const [service, setService] = useState<ServicePackage | null>(null);
+  const [recommendations, setRecommendations] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       if (id) {
-        const data = await getServiceById(id);
-        setService(data);
-        setLoading(false);
+        try {
+          const [data, allData] = await Promise.all([
+            getServiceById(id),
+            getAllServices()
+          ]);
+          setService(data);
+          
+          // Ambil 3 layanan lain secara acak/berurutan sebagai rekomendasi
+          const recs = allData.filter(s => s.id !== id).slice(0, 3);
+          setRecommendations(recs);
+        } catch (error) {
+          console.error("Error loading data:", error);
+        } finally {
+          setLoading(false);
+        }
       }
     }
     loadData();
@@ -42,8 +57,9 @@ export default function ServiceDetailPage() {
   if (!service) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 text-center">
-        <h1 className="text-2xl font-bold mb-4">Layanan Tidak Ditemukan</h1>
-        <Button onClick={() => router.push("/services")}>Kembali ke Katalog</Button>
+        <h1 className="text-3xl font-bold mb-4 font-heading text-white">Layanan Tidak Ditemukan</h1>
+        <p className="text-muted-foreground mb-8 max-w-md">Layanan yang Anda cari mungkin sudah tidak tersedia atau URL salah.</p>
+        <Button onClick={() => router.push("/services")} className="rounded-full">Kembali ke Katalog</Button>
       </div>
     );
   }
@@ -51,57 +67,67 @@ export default function ServiceDetailPage() {
   // Handle WhatsApp Link
   const handleOrder = () => {
     const phone = "6285904320201"; 
-    const message = `Halo Iky, saya mau order paket *${service.title}* seharga ${service.price}. Bagaimana prosedurnya?`;
+    const message = `Halo Iky, saya tertarik untuk order paket layanan: ${service.title} (${service.price}). Boleh minta informasi lebih lanjut?`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   // Logic Diskon
   const hasDiscount = Boolean(service.originalPrice && service.originalPrice !== "");
 
   return (
-    <main className="min-h-screen bg-background text-foreground pb-20 relative overflow-hidden">
+    // INFO: overflow-hidden dihapus agar sticky sidebar bekerja. Diganti dengan overflow-x-hidden jika perlu, tapi overflow-clip di background lebih aman.
+    <main className="min-h-screen bg-background text-foreground pb-20 relative selection:bg-primary/30 selection:text-white">
       <Navbar />
 
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/10 rounded-full blur-[80px] md:blur-[120px]" />
-        <div className="absolute bottom-[10%] right-[5%] w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-accent/5 rounded-full blur-[60px] md:blur-[100px]" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      {/* --- BACKGROUND FX --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-clip">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        <div className="absolute top-[10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-primary/10 rounded-full blur-[100px] mix-blend-screen" />
+        <div className="absolute bottom-[20%] right-[5%] w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-accent/5 rounded-full blur-[100px] mix-blend-screen" />
       </div>
 
-      <div className="container-width pt-24 pb-16 md:pt-32 relative z-10">
-        
-        {/* Breadcrumb / Back */}
-        <button 
-          onClick={() => router.back()} 
-          className="flex items-center text-muted-foreground hover:text-white transition-colors mb-6 text-sm pl-4 md:pl-0"
-        >
-          <ArrowLeft size={16} className="mr-2" /> Kembali ke Katalog
-        </button>
+      <div className="container max-w-7xl mx-auto pt-28 md:pt-36 px-4 sm:px-6 relative z-10">
 
-        {/* Flash Sale Banner (Jika Aktif) */}
-        {service.isFlashSale && (
-          <div className="mx-4 md:mx-0 mb-8 p-4 rounded-xl bg-gradient-to-r from-red-900/40 to-red-600/10 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-in fade-in slide-in-from-top-4">
-            <div className="p-2 bg-red-500 rounded-lg text-white animate-pulse shrink-0">
-              <Zap size={20} fill="currentColor" />
-            </div>
-            <div>
-              <h3 className="font-bold text-red-100 text-sm md:text-base">Sedang Flash Sale!</h3>
-              <div className="flex items-center gap-2 text-xs md:text-sm text-red-300 mt-1">
-                <Timer size={14} />
-                <span>Harga spesial ini akan berakhir segera. Amankan slot Anda sekarang.</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 px-4 md:px-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
           
-          {/* --- LEFT COLUMN: Images & Details --- */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
-            
-            {/* Product Image (Thumbnail) */}
-            <div className="rounded-2xl overflow-hidden border border-white/10 bg-secondary/10 aspect-video relative group">
+          {/* ======================================================== */}
+          {/* LEFT COLUMN: TITLE, IMAGE & DESCRIPTION (Col 8) */}
+          {/* ======================================================== */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="lg:col-span-8 space-y-8"
+          >
+            {/* 1. Header (Title & Meta) */}
+            <div>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="px-3 py-1 rounded-full bg-white/5 text-gray-300 text-xs font-mono uppercase tracking-widest border border-white/10">
+                  {service.category}
+                </span>
+                {service.recommended && (
+                  <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold uppercase tracking-widest border border-primary/30 flex items-center gap-1.5">
+                    <Star size={12} className="fill-primary" /> Pilihan
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl md:text-5xl font-heading font-bold text-white leading-tight mb-4">
+                {service.title}
+              </h1>
+              <p className="text-base md:text-lg text-gray-400 font-light leading-relaxed max-w-3xl">
+                {service.shortDesc}
+              </p>
+            </div>
+
+            {/* 2. Product Image Thumbnail */}
+            <div className="rounded-3xl overflow-hidden border border-white/10 bg-[#0d1117] aspect-[16/9] md:aspect-[21/9] relative shadow-2xl group">
               {service.thumbnail ? (
                 <img 
                   src={service.thumbnail} 
@@ -109,185 +135,254 @@ export default function ServiceDetailPage() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground bg-white/5">
-                  No Image Available
+                <div className="flex items-center justify-center h-full text-white/5">
+                  <span className="font-mono text-xl">NO PREVIEW</span>
                 </div>
               )}
-              
-              {/* Badges */}
-              <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2">
-                {service.recommended && (
-                  <div className="bg-primary text-white px-2 py-1 md:px-3 rounded-full text-[10px] md:text-xs font-bold shadow-lg w-fit backdrop-blur-sm">
-                    Recommended
-                  </div>
-                )}
-                {hasDiscount && (
-                  <div className="bg-red-500 text-white px-2 py-1 md:px-3 rounded-full text-[10px] md:text-xs font-bold shadow-lg w-fit backdrop-blur-sm">
-                    Hemat {service.discountValue}%
-                  </div>
-                )}
-              </div>
+              {/* Soft Inner Shadow */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 pointer-events-none" />
             </div>
 
-            {/* Product Info Header (Mobile Only) */}
-            <div className="block lg:hidden space-y-3">
-              <h1 className="text-2xl font-heading font-bold leading-tight">{service.title}</h1>
-              <div className="flex items-center justify-between">
+            {/* 3. Flash Sale Banner (Jika Aktif) */}
+            {service.isFlashSale && (
+              <div className="p-5 md:p-6 rounded-2xl bg-gradient-to-r from-red-900/40 to-red-500/5 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center gap-5 shadow-lg shadow-red-500/5">
+                <div className="p-3 bg-red-500 rounded-xl text-white animate-pulse shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+                  <Zap size={24} fill="currentColor" />
+                </div>
                 <div>
-                  {hasDiscount ? (
-                    <div>
-                      <span className="text-muted-foreground line-through text-xs md:text-sm">{service.originalPrice}</span>
-                      <div className="text-2xl font-bold text-red-500">{service.price}</div>
-                    </div>
-                  ) : (
-                    <div className="text-2xl font-bold text-primary">{service.price}</div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded text-xs text-yellow-400">
-                   <Star size={12} fill="currentColor" /> 
-                   <span className="font-bold text-white">{service.rating || "New"}</span>
+                  <h3 className="font-bold text-red-100 text-lg md:text-xl font-heading">Sedang Flash Sale!</h3>
+                  <div className="flex items-center gap-2 text-sm text-red-300 mt-1">
+                    <Timer size={16} />
+                    <span>Harga spesial ini akan berakhir segera. Amankan slot Anda sekarang.</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Description Tab Style */}
-            <div className="bg-secondary/5 border border-white/5 rounded-2xl p-5 md:p-8">
-              <h2 className="text-lg md:text-xl font-bold font-heading mb-4 md:mb-6 border-b border-white/10 pb-4">
-                Deskripsi Layanan
+            {/* 4. Description Section */}
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-6 md:p-10 shadow-xl">
+              <h2 className="text-xl md:text-2xl font-bold font-heading mb-6 border-b border-white/10 pb-4 text-white">
+                Detail Layanan
               </h2>
               
               {/* Render HTML Description */}
               <div 
-                className="prose prose-invert prose-sm md:prose-base max-w-none text-muted-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: service.description || service.shortDesc }}
+                className="prose prose-invert prose-gray max-w-none text-gray-300 leading-relaxed
+                prose-headings:text-white prose-headings:font-heading prose-a:text-primary 
+                prose-strong:text-white prose-ul:list-disc prose-ul:ml-4 prose-li:my-1"
+                dangerouslySetInnerHTML={{ __html: service.description || service.shortDesc || "Detail tidak tersedia." }}
               />
 
               {/* Features List */}
-              <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-white/10">
-                <h3 className="text-base md:text-lg font-bold mb-4 flex items-center gap-2">
-                  <ShieldCheck className="text-green-400" size={18} /> Apa yang Anda Dapatkan:
+              <div className="mt-10 pt-8 border-t border-white/10">
+                <h3 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2 text-white font-heading">
+                  <ShieldCheck className="text-green-400" size={24} /> Yang Akan Anda Dapatkan:
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {service.features.map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-3 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <CheckCircle size={16} className="text-primary mt-0.5 shrink-0" />
-                      <span className="text-sm text-muted-foreground">{feat}</span>
+                    <div key={idx} className="flex items-start gap-3 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+                      <CheckCircle size={18} className="text-primary mt-0.5 shrink-0" />
+                      <span className="text-sm text-gray-300">{feat}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-          </div>
+          </motion.div>
 
-          {/* --- RIGHT COLUMN: Sticky Action Card --- */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 md:top-28 space-y-6">
-              
-              {/* Main Action Card */}
-              <div className={cn(
-                "bg-secondary/10 border rounded-2xl p-5 md:p-6 backdrop-blur-md shadow-2xl transition-all",
-                service.isFlashSale ? "border-red-500/30 shadow-red-500/5" : "border-white/10"
-              )}>
-                
-                {/* Title & Stats (Desktop Only) */}
-                <div className="hidden lg:block mb-6">
-                  <h1 className="text-2xl font-heading font-bold mb-2">{service.title}</h1>
-                  
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-                    {(service.rating ?? 0) > 0 && (
-                      <div className="flex items-center gap-1 text-yellow-400">
-                        <Star size={14} fill="currentColor" /> 
-                        <span className="font-bold text-foreground">{service.rating}</span>
-                      </div>
-                    )}
-                    {(service.sales ?? 0) > 0 && (
-                      <div className="flex items-center gap-1">
-                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                        <span>{service.sales}+ Terjual</span>
-                      </div>
-                    )}
-                  </div>
+          {/* ======================================================== */}
+          {/* RIGHT COLUMN: STICKY CHECKOUT CARD (Col 4) */}
+          {/* ======================================================== */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="lg:col-span-4 lg:sticky lg:top-32 h-fit flex flex-col gap-6 pb-12"
+          >
+            {/* Checkout / Pricing Card */}
+            <div className={cn(
+              "bg-[#0a0a0a] border rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl overflow-hidden relative",
+              service.isFlashSale ? "border-red-500/30" : "border-white/10"
+            )}>
+              {/* Background Glow inside card */}
+              {service.isFlashSale && (
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-red-500/20 blur-[50px] rounded-full pointer-events-none" />
+              )}
+              {!service.isFlashSale && (
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-[50px] rounded-full pointer-events-none" />
+              )}
 
-                  {/* Pricing Display */}
-                  <div className="mb-1">
-                    {hasDiscount && (
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm text-muted-foreground line-through decoration-red-500/50">
-                          {service.originalPrice}
-                        </span>
-                        <span className="bg-red-500/20 text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold border border-red-500/20">
-                          -{service.discountValue}%
-                        </span>
-                      </div>
-                    )}
-                    <div className={cn("text-3xl font-bold", hasDiscount ? "text-red-500" : "text-primary")}>
-                      {service.price}
+              <div className="relative z-10">
+                {/* Stats */}
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-6">
+                  {(service.rating ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5 text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-md border border-yellow-400/20">
+                      <Star size={14} fill="currentColor" /> 
+                      <span className="font-bold text-yellow-400">{service.rating}</span>
                     </div>
-                  </div>
+                  )}
+                  {(service.sales ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest">
+                      <Users size={14} className="text-gray-500" />
+                      <span>{service.sales}+ Terjual</span>
+                    </div>
+                  )}
+                </div>
 
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-                    <Clock size={12} /> Estimasi: {service.duration}
+                {/* Pricing Display */}
+                <div className="mb-8">
+                  {hasDiscount && (
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-sm text-gray-500 line-through decoration-red-500/50">
+                        {service.originalPrice}
+                      </span>
+                      <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded font-bold border border-red-500/20 uppercase tracking-wider">
+                        Diskon {service.discountValue}%
+                      </span>
+                    </div>
+                  )}
+                  <div className={cn("text-4xl md:text-5xl font-bold font-mono tracking-tight", hasDiscount ? "text-red-400" : "text-white")}>
+                    {service.price}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-3 font-medium">
+                    <Clock size={16} className="text-gray-400" /> Estimasi pengerjaan: <span className="text-white">{service.duration}</span>
                   </div>
                 </div>
 
-                {/* Buttons */}
-                <div className="space-y-3">
+                {/* Action Buttons */}
+                <div className="space-y-4">
                   <Button 
                     className={cn(
-                      "w-full h-11 md:h-12 text-sm md:text-base font-bold shadow-lg active:scale-95 transition-transform",
-                      service.isFlashSale ? "bg-red-600 hover:bg-red-700 shadow-red-500/20 border-red-500" : "shadow-primary/20"
+                      "w-full h-14 text-base font-bold shadow-xl active:scale-95 transition-all rounded-xl",
+                      service.isFlashSale 
+                        ? "bg-red-600 hover:bg-red-700 text-white shadow-red-500/25 border border-red-500" 
+                        : "bg-white text-black hover:bg-gray-200 shadow-white/10"
                     )}
                     onClick={handleOrder}
                   >
-                    <ShoppingCart className="mr-2 w-4 h-4 md:w-5 md:h-5" /> 
-                    {service.isFlashSale ? "Ambil Promo" : "Order Sekarang"}
+                    <ShoppingCart className="mr-2 w-5 h-5" /> 
+                    {service.isFlashSale ? "Ambil Promo Sekarang" : "Pesan Layanan"}
                   </Button>
                   
                   <Button 
                     variant="outline" 
-                    className="w-full h-11 md:h-12 text-sm md:text-base border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors active:scale-95"
+                    className="w-full h-12 text-sm border-white/10 hover:bg-white/5 hover:text-white transition-colors active:scale-95 rounded-xl bg-transparent text-gray-300"
                     onClick={() => {
                         const phone = "6285904320201";
-                        window.open(`https://wa.me/${phone}?text=Halo, mau tanya detail tentang ${service.title}`, "_blank");
+                        window.open(`https://wa.me/${phone}?text=Halo, mau konsultasi dulu tentang layanan ${service.title}`, "_blank");
                     }}
                   >
-                    <MessageSquare className="mr-2 w-4 h-4 md:w-5 md:h-5" /> Chat Konsultasi
+                    <MessageSquare className="mr-2 w-4 h-4" /> Chat & Konsultasi Gratis
                   </Button>
                 </div>
 
                 {/* Safe Guarantee */}
-                <div className="mt-6 pt-6 border-t border-white/5 space-y-3">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <ShieldCheck size={14} className="text-green-400" />
-                    <span>Garansi Revisi & Support Teknis</span>
+                <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+                  <div className="flex items-center gap-3 text-sm text-gray-400">
+                    <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                      <ShieldCheck size={16} className="text-green-400" />
+                    </div>
+                    <span>Garansi <b>Revisi</b> & Support Teknis.</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <Users size={14} className="text-blue-400" />
-                    <span>Konsultasi Gratis sebelum Deal</span>
+                  <div className="flex items-center gap-3 text-sm text-gray-400">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <Users size={16} className="text-blue-400" />
+                    </div>
+                    <span>Ditangani langsung oleh <b>Developer</b>.</span>
                   </div>
                 </div>
-
               </div>
+            </div>
 
-              {/* Share Button */}
-              <div className="flex justify-center">
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("Link produk disalin!");
-                  }}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition-colors py-2 px-4 rounded-full hover:bg-white/5"
-                >
-                  <Share2 size={16} /> Bagikan Paket Ini
+            {/* Share Box (Matches Blog Detail Share Box) */}
+            <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-5 shadow-xl flex items-center justify-between gap-4">
+              <span className="text-sm font-medium text-gray-400">Bagikan:</span>
+              <div className="flex items-center gap-2">
+                <button onClick={handleShare} className="w-auto px-4 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all text-sm font-medium gap-2 text-gray-300 hover:text-white">
+                  {isCopied ? <CheckCircle2 size={14} className="text-emerald-400" /> : <LinkIcon size={14} />}
+                  {isCopied ? <span className="text-emerald-400">Tersalin</span> : "Copy Link"}
                 </button>
               </div>
-
             </div>
-          </div>
+
+          </motion.div>
 
         </div>
+
+        {/* ======================================================== */}
+        {/* BOTTOM SECTION: RECOMMENDATIONS */}
+        {/* ======================================================== */}
+        
+        {/* --- Rekomendasi Layanan Lainnya --- */}
+        {recommendations.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="mt-20 pt-16 border-t border-white/10"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold font-heading text-white flex items-center gap-3">
+                <Sparkles className="text-primary" size={28} /> Layanan Serupa
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendations.map(item => (
+                <CompactServiceCard 
+                  key={item.id} 
+                  item={item} 
+                  onClick={() => router.push(`/services/${item.id}`)} 
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
       </div>
     </main>
+  );
+}
+
+// --- SUB-COMPONENTS FOR BOTTOM SECTIONS ---
+
+// Card Minimalis untuk Rekomendasi
+function CompactServiceCard({ item, onClick }: { item: ServicePackage, onClick: () => void }) {
+  const hasDiscount = Boolean(item.originalPrice && item.originalPrice !== "");
+
+  return (
+    <div 
+      onClick={onClick} 
+      className="group flex flex-col rounded-3xl bg-[#0a0a0a] border border-white/10 overflow-hidden cursor-pointer hover:border-primary/50 transition-all duration-300 shadow-lg hover:shadow-primary/5"
+    >
+      <div className="aspect-video relative overflow-hidden bg-[#0d1117] border-b border-white/5">
+        {item.thumbnail ? (
+          <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        ) : (
+          <div className="flex items-center justify-center h-full text-white/5"><Sparkles size={40} /></div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-xs font-bold text-yellow-400 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10">
+          <Star size={12} className="fill-yellow-400" /> {item.rating || "New"}
+        </div>
+      </div>
+      
+      <div className="p-5 flex flex-col flex-grow">
+        <h4 className="font-heading font-bold text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors text-base">
+          {item.title}
+        </h4>
+        <div className="mt-auto pt-4 flex items-end justify-between border-t border-white/5">
+          <div className="flex flex-col">
+            {hasDiscount && <span className="text-xs text-gray-500 line-through mb-0.5">{item.originalPrice}</span>}
+            <span className="text-lg font-bold font-mono text-white tracking-tight">{item.price}</span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors border border-white/10 group-hover:border-primary">
+            <ArrowRight size={16} className="group-hover:-rotate-45 transition-transform" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-// CommandMenuTrigger Desktop Only (sudah kita update sebelumnya)
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger"; 
 import { CommandPalette } from "@/components/ui/command-palette";
 import { AuthProvider } from "@/lib/auth-context";
 import { Analytics } from "@vercel/analytics/react"; 
 import { ChatWidget } from "@/components/ai/chat-widget";
+import { FooterWrapper } from "@/components/layout/footer-wrapper";
 
 // Font Setup
 const inter = Inter({
@@ -93,7 +93,13 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CommandPalette />
+          
+          {/* Children sekarang otomatis dibungkus oleh app/template.tsx */}
           {children}
+          
+          {/* Footer Wrapper akan mengecualikan halaman /admin */}
+          <FooterWrapper />
+          
           <Analytics />
           <CommandMenuTrigger />
           <ChatWidget />

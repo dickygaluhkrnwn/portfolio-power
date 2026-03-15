@@ -1,441 +1,310 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ProtectedRoute } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
-import { auth, db } from "@/lib/firebase";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { useRouter } from "next/navigation";
 import { 
-  LogOut, Plus, Pencil, Trash2, ExternalLink, RefreshCw, 
-  Grid, Share2, BookOpen, Briefcase, ShoppingBag, MoreVertical 
+  Grid, ShoppingBag, BookOpen, Share2, Activity, ArrowRight, 
+  Zap, Briefcase, Clock, Server, ShieldCheck, Cpu, Database, Network
 } from "lucide-react";
 import { getAllProjects } from "@/lib/projects-service";
-import { getAllSocials, deleteSocial, SocialLink } from "@/lib/socials-service";
-import { getAllPosts, deletePost, BlogPost } from "@/lib/blog-service"; 
-import { getAllJourneyItems, deleteJourneyItem, JourneyItem } from "@/lib/journey-service";
-import { getAllServices, deleteService } from "@/lib/services-service";
-import { ServicePackage } from "@/app/data/services"; 
-import { Project } from "@/app/data/projects";
-import { deleteDoc, doc } from "firebase/firestore";
+import { getAllSocials } from "@/lib/socials-service";
+import { getAllPosts } from "@/lib/blog-service"; 
+import { getAllServices } from "@/lib/services-service";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
-export default function DashboardPage() {
+export default function DashboardOverview() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"projects" | "socials" | "blog" | "journey" | "services">("projects");
-  
-  // States
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [socials, setSocials] = useState<SocialLink[]>([]);
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]);
-  const [services, setServices] = useState<ServicePackage[]>([]);
-  
+  const [stats, setStats] = useState({ projects: 0, services: 0, blog: 0, socials: 0 });
+  const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Live Clock
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [activeTab]);
-
-  const loadData = async () => {
-    setLoading(true);
-    if (activeTab === "projects") {
-      const data = await getAllProjects();
-      setProjects(data);
-    } else if (activeTab === "socials") {
-      const data = await getAllSocials();
-      setSocials(data);
-    } else if (activeTab === "blog") {
-      const data = await getAllPosts();
-      setPosts(data);
-    } else if (activeTab === "journey") {
-      const data = await getAllJourneyItems();
-      setJourneyItems(data);
-    } else if (activeTab === "services") {
-      const data = await getAllServices();
-      setServices(data);
+    async function loadStats() {
+      try {
+        const [proj, soc, blog, serv] = await Promise.all([
+          getAllProjects(), getAllSocials(), getAllPosts(), getAllServices()
+        ]);
+        setStats({ projects: proj.length, services: serv.length, blog: blog.length, socials: soc.length });
+        setRecentPosts(blog.slice(0, 4)); // Ambil 4 artikel terbaru
+      } catch (error) {
+        console.error("Gagal memuat data dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
-  };
+    loadStats();
+  }, []);
 
-  const handleLogout = async () => {
-    await auth.signOut();
-    router.push("/admin/login");
-  };
-
-  // Delete Handlers
-  const handleDeleteProject = async (id: string) => {
-    if (confirm("Delete this project?")) {
-      await deleteDoc(doc(db, "projects", id));
-      loadData();
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
     }
   };
 
-  const handleDeleteSocial = async (id: string) => {
-    if (confirm("Delete this link?")) {
-      await deleteSocial(id);
-      loadData();
-    }
-  };
-
-  const handleDeletePost = async (id: string) => {
-    if (confirm("Delete this article?")) {
-      await deletePost(id);
-      loadData();
-    }
-  };
-
-  const handleDeleteJourney = async (id: string) => {
-    if (confirm("Delete this journey item?")) {
-      await deleteJourneyItem(id);
-      loadData();
-    }
-  };
-
-  const handleDeleteService = async (id: string) => {
-    if (confirm("Delete this service package?")) {
-      await deleteService(id);
-      loadData();
-    }
-  };
-
-  const handleAdd = () => {
-    if (activeTab === "projects") router.push("/admin/projects/new");
-    if (activeTab === "socials") router.push("/admin/socials/new");
-    if (activeTab === "blog") router.push("/admin/blog/new");
-    if (activeTab === "journey") router.push("/admin/journey/new");
-    if (activeTab === "services") router.push("/admin/services/new");
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
   };
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground pb-24 md:pb-12">
+    <AdminLayout title="" description="">
+      
+      {/* --- GREETING & SYSTEM STATUS BANNER --- */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 md:p-8 mb-8 relative overflow-hidden shadow-2xl"
+      >
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3" />
         
-        {/* Header - Mobile & Desktop */}
-        <header className="border-b border-white/10 bg-background/80 backdrop-blur sticky top-0 z-50">
-          <div className="container-width py-4 flex items-center justify-between">
-            <h1 className="font-heading text-lg md:text-xl font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Admin Panel
-            </h1>
-            <div className="flex items-center gap-4">
-              <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">{auth.currentUser?.email}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                <LogOut size={18} />
-              </Button>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs uppercase tracking-widest mb-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              System Operational
             </div>
+            <h2 className="text-3xl md:text-4xl font-bold font-heading text-white mb-2">
+              Welcome back, Admin.
+            </h2>
+            <p className="text-gray-400 text-sm md:text-base max-w-xl">
+              Semua modul berjalan optimal. Anda memiliki kendali penuh atas konten portofolio Anda.
+            </p>
           </div>
-        </header>
-
-        <main className="container-width py-8">
           
-          {/* TAB NAVIGATION (Scrollable) */}
-          <div className="mb-8 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0">
-            <div className="flex gap-2 min-w-max">
-              <TabButton 
-                active={activeTab === "projects"} 
-                onClick={() => setActiveTab("projects")} 
-                icon={<Grid size={16} />} 
-                label="Projects" 
-              />
-              <TabButton 
-                active={activeTab === "services"} 
-                onClick={() => setActiveTab("services")} 
-                icon={<ShoppingBag size={16} />} 
-                label="Services" 
-              />
-              <TabButton 
-                active={activeTab === "journey"} 
-                onClick={() => setActiveTab("journey")} 
-                icon={<Briefcase size={16} />} 
-                label="Journey" 
-              />
-              <TabButton 
-                active={activeTab === "blog"} 
-                onClick={() => setActiveTab("blog")} 
-                icon={<BookOpen size={16} />} 
-                label="Blog" 
-              />
-              <TabButton 
-                active={activeTab === "socials"} 
-                onClick={() => setActiveTab("socials")} 
-                icon={<Share2 size={16} />} 
-                label="Links" 
-              />
+          {/* Live Digital Clock */}
+          <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-4 shrink-0">
+            <div className="p-3 bg-white/5 rounded-xl text-primary border border-white/5">
+              <Clock size={24} />
             </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
-              <h2 className="text-2xl font-heading font-bold capitalize">
-                Manage {activeTab}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {loading ? "Loading..." : `Total items: ${
-                  activeTab === "projects" ? projects.length :
-                  activeTab === "services" ? services.length :
-                  activeTab === "journey" ? journeyItems.length :
-                  activeTab === "blog" ? posts.length : socials.length
-                }`}
-              </p>
-            </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <Button variant="outline" onClick={loadData} title="Refresh" className="px-3">
-                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-              </Button>
-              <Button onClick={handleAdd} className="flex-1 md:flex-none">
-                <Plus size={18} className="mr-2" /> Add New
-              </Button>
+              <div className="text-2xl font-mono font-bold text-white tracking-tight">
+                {currentTime.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </div>
+              <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-0.5">
+                {currentTime.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </div>
             </div>
           </div>
+        </div>
+      </motion.div>
 
-          {/* CONTENT AREA */}
-          <div className="min-h-[300px]">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
-                <RefreshCw className="animate-spin w-8 h-8 opacity-50" />
-                <p>Syncing data...</p>
-              </div>
-            ) : (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  
-                  {/* --- MOBILE VIEW: CARD LIST --- */}
-                  <div className="md:hidden space-y-4">
-                    
-                    {/* Projects Cards */}
-                    {activeTab === "projects" && projects.map((p) => (
-                      <MobileCard key={p.id} title={p.title} subtitle={p.category} status={`${p.techStack?.length || 0} Techs`}>
-                        <ActionButtons 
-                          onView={() => window.open(`/projects/${p.id}`, '_blank')}
-                          onEdit={() => router.push(`/admin/projects/${p.id}`)}
-                          onDelete={() => handleDeleteProject(String(p.id))}
-                        />
-                      </MobileCard>
-                    ))}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-white/5 rounded-3xl animate-pulse" />)}
+        </div>
+      ) : (
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="w-full"
+        >
+          {/* --- METRIC CARDS GRID --- */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+            <motion.div variants={itemVariants}>
+              <StatCard icon={<Grid size={20} />} label="Total Projects" value={stats.projects} color="blue" onClick={() => router.push("/admin/projects")} />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <StatCard icon={<ShoppingBag size={20} />} label="Total Services" value={stats.services} color="purple" onClick={() => router.push("/admin/services")} />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <StatCard icon={<BookOpen size={20} />} label="Blog Articles" value={stats.blog} color="emerald" onClick={() => router.push("/admin/blog")} />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <StatCard icon={<Share2 size={20} />} label="Social Links" value={stats.socials} color="rose" onClick={() => router.push("/admin/socials")} />
+            </motion.div>
+          </div>
 
-                    {/* Services Cards */}
-                    {activeTab === "services" && services.map((s) => (
-                      <MobileCard key={s.id} title={s.title} subtitle={`${s.price} • ${s.duration}`} status={s.recommended ? "Recommended" : ""}>
-                        <ActionButtons 
-                          onEdit={() => router.push(`/admin/services/${s.id}`)}
-                          onDelete={() => handleDeleteService(s.id)}
-                        />
-                      </MobileCard>
-                    ))}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* --- LEFT COLUMN (Col 8) --- */}
+            <div className="lg:col-span-8 flex flex-col gap-8">
+              
+              {/* Quick Actions Bento */}
+              <motion.div variants={itemVariants} className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold font-heading text-white flex items-center gap-2">
+                    <Zap size={20} className="text-yellow-400" /> Aksi Cepat
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <QuickActionButton icon={<Grid />} label="New Project" onClick={() => router.push("/admin/projects/new")} color="bg-blue-500" />
+                  <QuickActionButton icon={<BookOpen />} label="Write Post" onClick={() => router.push("/admin/blog/new")} color="bg-emerald-500" />
+                  <QuickActionButton icon={<ShoppingBag />} label="Add Service" onClick={() => router.push("/admin/services/new")} color="bg-purple-500" />
+                  <QuickActionButton icon={<Briefcase />} label="Add Journey" onClick={() => router.push("/admin/journey/new")} color="bg-orange-500" />
+                </div>
+              </motion.div>
 
-                    {/* Journey Cards */}
-                    {activeTab === "journey" && journeyItems.map((item) => (
-                      <MobileCard key={item.id} title={item.role} subtitle={item.year} status={item.type}>
-                        <ActionButtons 
-                          onEdit={() => router.push(`/admin/journey/${item.id}`)}
-                          onDelete={() => handleDeleteJourney(item.id)}
-                        />
-                      </MobileCard>
-                    ))}
+              {/* Recent Activity (Blog) */}
+              <motion.div variants={itemVariants} className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-xl flex-grow">
+                <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+                  <h3 className="text-lg font-bold font-heading text-white flex items-center gap-2">
+                    <Activity size={20} className="text-primary" /> Artikel Terbaru
+                  </h3>
+                  <button onClick={() => router.push("/admin/blog")} className="text-xs font-mono uppercase tracking-widest text-primary hover:text-primary/80 flex items-center transition-colors">
+                    Lihat Semua <ArrowRight size={14} className="ml-1" />
+                  </button>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                  {recentPosts.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic text-center py-4">Belum ada artikel yang dipublikasikan.</p>
+                  ) : (
+                    recentPosts.map((post, idx) => (
+                      <div key={post.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all group cursor-pointer" onClick={() => router.push(`/admin/blog/${post.id}`)}>
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-12 h-12 rounded-xl bg-[#0d1117] border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
+                             {post.coverImage ? <img src={post.coverImage} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <BookOpen size={16} className="text-gray-500" />}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-white truncate group-hover:text-primary transition-colors">{post.title}</h4>
+                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-wider mt-1">{new Date(post.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded border shrink-0 ml-4", 
+                          post.isPublished ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                        )}>
+                          {post.isPublished ? "Published" : "Draft"}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
 
-                    {/* Blog Cards */}
-                    {activeTab === "blog" && posts.map((post) => (
-                      <MobileCard key={post.id} title={post.title} subtitle={new Date(post.publishedAt).toLocaleDateString()} status={post.isPublished ? "Published" : "Draft"}>
-                        <ActionButtons 
-                          onView={() => window.open(`/blog/${post.slug}`, '_blank')}
-                          onEdit={() => router.push(`/admin/blog/${post.id}`)}
-                          onDelete={() => handleDeletePost(post.id)}
-                        />
-                      </MobileCard>
-                    ))}
+            </div>
 
-                    {/* Socials Cards */}
-                    {activeTab === "socials" && socials.map((s) => (
-                      <MobileCard key={s.id} title={s.platform} subtitle={s.url} status={s.category}>
-                        <ActionButtons 
-                          onView={() => window.open(s.url, '_blank')}
-                          onEdit={() => router.push(`/admin/socials/${s.id}`)}
-                          onDelete={() => handleDeleteSocial(s.id)}
-                        />
-                      </MobileCard>
-                    ))}
+            {/* --- RIGHT COLUMN (Col 4) : SYSTEM HEALTH --- */}
+            <motion.div variants={itemVariants} className="lg:col-span-4">
+              <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden h-full flex flex-col">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[40px] rounded-full pointer-events-none" />
+                
+                <h3 className="text-lg font-bold font-heading text-white flex items-center gap-2 mb-6 pb-4 border-b border-white/5 relative z-10">
+                  <Server size={20} className="text-gray-400" /> System Health
+                </h3>
 
-                    {/* Empty State */}
-                    {/* Logic cek kosong sama seperti di desktop, disederhanakan */}
-                  </div>
-
-                  {/* --- DESKTOP VIEW: TABLE --- */}
-                  <div className="hidden md:block border border-white/10 rounded-xl overflow-hidden bg-secondary/5">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-secondary/20 text-muted-foreground uppercase text-xs">
-                          <tr>
-                            <th className="px-6 py-4 font-medium">Main Info</th>
-                            <th className="px-6 py-4 font-medium">Details</th>
-                            <th className="px-6 py-4 font-medium text-center">Status</th>
-                            <th className="px-6 py-4 font-medium text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                          
-                          {activeTab === "projects" && projects.map((p) => (
-                            <tr key={p.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 font-medium">{p.title}</td>
-                              <td className="px-6 py-4 text-muted-foreground">{p.category}</td>
-                              <td className="px-6 py-4 text-center">
-                                <span className="px-2 py-1 rounded-full bg-white/5 text-xs border border-white/10">{p.techStack?.length || 0} Techs</span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <ActionButtons 
-                                  onView={() => window.open(`/projects/${p.id}`, '_blank')}
-                                  onEdit={() => router.push(`/admin/projects/${p.id}`)}
-                                  onDelete={() => handleDeleteProject(String(p.id))}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-
-                          {activeTab === "services" && services.map((s) => (
-                            <tr key={s.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 font-medium">{s.title}</td>
-                              <td className="px-6 py-4 text-muted-foreground">{s.price} • {s.duration}</td>
-                              <td className="px-6 py-4 text-center">
-                                {s.recommended && <span className="bg-yellow-500/10 text-yellow-400 px-2 py-1 rounded text-xs font-bold border border-yellow-500/20">Recommended</span>}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <ActionButtons 
-                                  onEdit={() => router.push(`/admin/services/${s.id}`)}
-                                  onDelete={() => handleDeleteService(s.id)}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-
-                          {activeTab === "journey" && journeyItems.map((item) => (
-                            <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 font-medium">{item.role}</td>
-                              <td className="px-6 py-4 text-muted-foreground">{item.year}</td>
-                              <td className="px-6 py-4 text-center capitalize">{item.type}</td>
-                              <td className="px-6 py-4 text-right">
-                                <ActionButtons 
-                                  onEdit={() => router.push(`/admin/journey/${item.id}`)}
-                                  onDelete={() => handleDeleteJourney(item.id)}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-
-                          {activeTab === "socials" && socials.map((s) => (
-                            <tr key={s.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 font-medium">{s.platform}</td>
-                              <td className="px-6 py-4 text-muted-foreground truncate max-w-[200px]">{s.url}</td>
-                              <td className="px-6 py-4 text-center capitalize">{s.category}</td>
-                              <td className="px-6 py-4 text-right">
-                                <ActionButtons 
-                                  onView={() => window.open(s.url, '_blank')}
-                                  onEdit={() => router.push(`/admin/socials/${s.id}`)}
-                                  onDelete={() => handleDeleteSocial(s.id)}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-
-                          {activeTab === "blog" && posts.map((post) => (
-                            <tr key={post.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-6 py-4 font-medium">{post.title}</td>
-                              <td className="px-6 py-4 text-muted-foreground text-xs">
-                                {new Date(post.publishedAt).toLocaleDateString()}
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <span className={cn(
-                                  "px-2 py-1 rounded-full text-xs font-medium border",
-                                  post.isPublished 
-                                    ? "bg-green-500/10 text-green-400 border-green-500/20" 
-                                    : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                                )}>
-                                  {post.isPublished ? "Published" : "Draft"}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <ActionButtons 
-                                  onView={() => window.open(`/blog/${post.slug}`, '_blank')}
-                                  onEdit={() => router.push(`/admin/blog/${post.id}`)}
-                                  onDelete={() => handleDeletePost(post.id)}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-
-                        </tbody>
-                      </table>
+                <div className="space-y-6 flex-grow relative z-10">
+                  {/* Status Item */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-300 flex items-center gap-2"><Database size={14} className="text-blue-400"/> Database (Firestore)</span>
+                      <span className="text-xs font-mono text-emerald-400">Connected</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-[100%] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                     </div>
                   </div>
 
-                </motion.div>
-              </AnimatePresence>
-            )}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-300 flex items-center gap-2"><Network size={14} className="text-purple-400"/> API Latency</span>
+                      <span className="text-xs font-mono text-emerald-400">~45ms</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-[10%] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-300 flex items-center gap-2"><Cpu size={14} className="text-orange-400"/> System Load</span>
+                      <span className="text-xs font-mono text-emerald-400">Optimal</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-[24%] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-white/5 relative z-10">
+                  <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start gap-3">
+                    <ShieldCheck size={20} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-white mb-1">Keamanan Aktif</p>
+                      <p className="text-xs text-gray-500 leading-relaxed">Sistem autentikasi Firebase beroperasi secara normal. Data terenkripsi.</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </motion.div>
+
           </div>
-        </main>
-      </div>
-    </ProtectedRoute>
+        </motion.div>
+      )}
+    </AdminLayout>
   );
 }
 
-// Sub-components
-function TabButton({ active, onClick, icon, label }: any) {
+// --- LOCAL UI COMPONENTS ---
+
+function QuickActionButton({ icon, label, onClick, color }: any) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 py-2 px-4 rounded-full text-sm font-medium transition-all whitespace-nowrap border",
-        active 
-          ? "bg-primary/10 text-primary border-primary/20 shadow-lg shadow-primary/10" 
-          : "bg-secondary/10 text-muted-foreground border-transparent hover:bg-secondary/20 hover:text-white"
-      )}
+    <button 
+      onClick={onClick} 
+      className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all outline-none group text-center"
     >
-      {icon} {label}
+      <div className={cn(
+        "w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform duration-300 group-hover:scale-110 shadow-lg",
+        color, "shadow-current/20"
+      )}>
+        {icon}
+      </div>
+      <span className="font-semibold text-xs text-gray-300 group-hover:text-white transition-colors">{label}</span>
     </button>
   );
 }
 
-// Mobile Card Component (New)
-function MobileCard({ title, subtitle, status, children }: any) {
-  return (
-    <div className="bg-secondary/10 border border-white/5 rounded-xl p-4 flex flex-col gap-3">
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <h3 className="font-bold text-base line-clamp-1">{title}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-1">{subtitle}</p>
-        </div>
-        {status && (
-          <span className="text-[10px] uppercase font-bold tracking-wider bg-white/5 px-2 py-1 rounded border border-white/10 text-muted-foreground shrink-0 ml-2">
-            {status}
-          </span>
-        )}
-      </div>
-      <div className="pt-3 border-t border-white/5 flex justify-end">
-        {children}
-      </div>
-    </div>
-  );
-}
+function StatCard({ icon, label, value, onClick, color }: any) {
+  // Map color string to tailwind classes
+  const colorMap: Record<string, { text: string, bg: string, border: string, shadow: string }> = {
+    blue: { text: "text-blue-400", bg: "bg-blue-500/10", border: "group-hover:border-blue-500/30", shadow: "group-hover:shadow-[0_0_20px_-5px_rgba(59,130,246,0.2)]" },
+    purple: { text: "text-purple-400", bg: "bg-purple-500/10", border: "group-hover:border-purple-500/30", shadow: "group-hover:shadow-[0_0_20px_-5px_rgba(168,85,247,0.2)]" },
+    emerald: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "group-hover:border-emerald-500/30", shadow: "group-hover:shadow-[0_0_20px_-5px_rgba(16,185,129,0.2)]" },
+    rose: { text: "text-rose-400", bg: "bg-rose-500/10", border: "group-hover:border-rose-500/30", shadow: "group-hover:shadow-[0_0_20px_-5px_rgba(244,63,94,0.2)]" },
+  };
 
-function ActionButtons({ onView, onEdit, onDelete }: any) {
+  const theme = colorMap[color] || colorMap.blue;
+
   return (
-    <div className="flex justify-end gap-1">
-      {onView && (
-        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-500/10 hover:text-blue-400" onClick={onView} title="View">
-          <ExternalLink size={16}/>
-        </Button>
+    <div 
+      onClick={onClick} 
+      className={cn(
+        "bg-[#0a0a0a] border border-white/10 rounded-3xl p-5 md:p-6 transition-all duration-300 cursor-pointer relative overflow-hidden group",
+        theme.border, theme.shadow
       )}
-      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-yellow-500/10 hover:text-yellow-400" onClick={onEdit} title="Edit">
-        <Pencil size={16}/>
-      </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-500/10 hover:text-red-400" onClick={onDelete} title="Delete">
-        <Trash2 size={16}/>
-      </Button>
+    >
+      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full blur-[30px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-current" style={{ color: "var(--color-primary)" }} />
+
+      <div className="flex justify-between items-start mb-6 relative z-10">
+        <div className={cn("p-3 rounded-2xl border border-white/5 transition-transform duration-300 group-hover:scale-110", theme.bg, theme.text)}>
+          {icon}
+        </div>
+        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+          <ArrowRight size={14} className="text-gray-400" />
+        </div>
+      </div>
+      
+      <div className="relative z-10">
+        <h4 className="text-3xl md:text-4xl font-bold text-white font-heading tracking-tight mb-1">{value}</h4>
+        <p className="text-[10px] md:text-xs text-gray-500 font-mono uppercase tracking-widest">{label}</p>
+      </div>
     </div>
   );
 }

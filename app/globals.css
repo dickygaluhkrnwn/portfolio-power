@@ -66,6 +66,33 @@ body {
   overflow-x: hidden; /* Mencegah scroll horizontal liar */
 }
 
+/* --- CUSTOM SCROLLBAR PREMIUM --- */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted) var(--color-background);
+}
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px; /* Lebih tipis agar terkesan premium */
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted);
+  border-radius: 10px;
+  border: 2px solid var(--color-background); /* Memberikan padding buatan */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary); /* Warna primary saat scrollbar di hover */
+}
+
 /* --- UTILITY CLASSES --- */
 @layer utilities {
   /* Glassmorphism Modern */

@@ -4,18 +4,23 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Loader2, Trash, Plus, X, Image as ImageIcon, Zap, Percent, Calculator, Clock, Check } from "lucide-react";
+import { 
+  ArrowLeft, Save, Loader2, Trash2, Plus, X, Image as ImageIcon, 
+  Zap, Percent, Calculator, Clock, CheckCircle2, Star,
+  LayoutGrid, FileText, MonitorPlay, Tag, ShoppingCart, Users, ShieldCheck
+} from "lucide-react";
 import { getServiceById, saveService, deleteService } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
 import TiptapEditor from "@/components/ui/tiptap-editor";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Kita extend tipe data ServicePackage untuk mengakomodasi field baru sementara
+// Extended Type
 type ExtendedServicePackage = Partial<ServicePackage> & {
   flashSaleEndDate?: string;
 };
 
-// Initial state lengkap untuk mencegah Uncontrolled Input Error
+// Initial state
 const initialData: ExtendedServicePackage = {
   title: "",
   price: "",
@@ -34,6 +39,8 @@ const initialData: ExtendedServicePackage = {
   flashSaleEndDate: "",
 };
 
+type TabType = "general" | "pricing" | "content";
+
 export default function ServiceFormPage() {
   const router = useRouter();
   const params = useParams();
@@ -46,6 +53,8 @@ export default function ServiceFormPage() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [activeTab, setActiveTab] = useState<TabType>("general");
 
   useEffect(() => {
     if (!isNew && id) {
@@ -80,7 +89,6 @@ export default function ServiceFormPage() {
   // --- HELPER: FORMAT CURRENCY ---
   const formatRupiah = (value: string) => {
     if (!value) return "";
-    
     const numberString = value.replace(/[^,\d]/g, "").toString();
     const split = numberString.split(",");
     const sisa = split[0].length % 3;
@@ -152,8 +160,8 @@ export default function ServiceFormPage() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSaving(true);
     setError(null);
     
@@ -165,24 +173,30 @@ export default function ServiceFormPage() {
     if (!dataToSave.isFlashSale) {
       dataToSave.flashSaleEndDate = "";
     }
+    
+    if (!dataToSave.title || !dataToSave.price) {
+      setError("Judul dan Harga wajib diisi.");
+      setSaving(false);
+      return;
+    }
 
     try {
       await saveService(dataToSave, isNew ? undefined : id);
-      router.push("/admin/dashboard");
-    } catch (err) {
+      router.push("/admin/services");
+    } catch (err: any) {
       console.error("Error saving:", err);
-      setError("Gagal menyimpan layanan. Coba lagi nanti.");
+      setError("Gagal menyimpan layanan. " + (err.message || ""));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (confirm("Apakah Anda yakin ingin menghapus layanan ini?")) {
+    if (confirm("Apakah Anda yakin ingin menghapus layanan ini secara permanen?")) {
       setSaving(true);
       try {
         await deleteService(id);
-        router.push("/admin/dashboard");
+        router.push("/admin/services");
       } catch (err) {
         console.error("Error deleting:", err);
         setError("Gagal menghapus layanan.");
@@ -192,7 +206,8 @@ export default function ServiceFormPage() {
   };
 
   // Feature List Helpers
-  const addFeature = () => {
+  const addFeature = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
     if (featureInput.trim()) {
       setFormData(prev => ({
         ...prev,
@@ -209,17 +224,19 @@ export default function ServiceFormPage() {
     }));
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#050505]"><Loader2 className="animate-spin text-primary w-10 h-10" /></div>;
+  }
 
-  if (error) {
+  if (error && !formData.title && !isNew) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
-          <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-xl text-center max-w-md">
-            <h3 className="text-xl font-bold text-red-400 mb-2">Terjadi Kesalahan</h3>
-            <p className="text-muted-foreground mb-6">{error}</p>
-            <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>
-              Kembali ke Dashboard
+        <div className="min-h-screen bg-[#050505] text-foreground flex flex-col items-center justify-center p-4">
+          <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center max-w-md shadow-2xl">
+            <h3 className="text-2xl font-bold text-red-400 mb-2">Terjadi Kesalahan</h3>
+            <p className="text-gray-400 mb-8">{error}</p>
+            <Button onClick={() => router.push("/admin/services")} className="rounded-full bg-red-500 hover:bg-red-600 text-white">
+              Kembali ke Layanan
             </Button>
           </div>
         </div>
@@ -229,301 +246,499 @@ export default function ServiceFormPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground pb-24 md:pb-20">
+      <div className="min-h-screen bg-[#050505] text-foreground pb-24 relative selection:bg-purple-500/30 selection:text-white">
         
-        {/* Sticky Header */}
-        <header className="border-b border-white/10 bg-background/80 backdrop-blur sticky top-0 z-50">
-          <div className="container-width py-4 flex items-center justify-between gap-4">
+        {/* Background FX */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-clip fixed">
+          <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] mix-blend-screen" />
+        </div>
+
+        {/* --- STICKY HEADER --- */}
+        <header className="border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/admin/dashboard")} className="hover:bg-white/10">
-                <ArrowLeft size={20} />
+              <Button variant="outline" size="icon" onClick={() => router.push("/admin/services")} className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:text-white text-gray-400">
+                <ArrowLeft size={18} />
               </Button>
-              <h1 className="font-heading text-lg md:text-xl font-bold truncate">
-                {isNew ? "Add Product Service" : "Edit Product Service"}
-              </h1>
-            </div>
-            {!isNew && (
-              <div className="hidden md:block">
-                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
-                  {saving ? <Loader2 className="animate-spin mr-2"/> : <Trash size={16} className="mr-2" />} Delete
-                </Button>
+              <div>
+                <h1 className="font-heading text-lg md:text-xl font-bold text-white truncate max-w-[200px] md:max-w-md">
+                  {isNew ? "Layanan Baru" : formData.title || "Untitled Service"}
+                </h1>
+                <p className="text-xs text-gray-500 font-mono tracking-widest uppercase mt-0.5">
+                  {isNew ? "Drafting Product" : "Editing Product"}
+                </p>
               </div>
-            )}
+            </div>
+            
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {!isNew && (
+                <Button variant="outline" size="icon" onClick={handleDelete} disabled={saving} className="rounded-xl bg-transparent border-white/10 text-gray-400 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 hidden md:flex">
+                  <Trash2 size={16} />
+                </Button>
+              )}
+              <span className="hidden md:flex text-xs font-mono text-gray-500 mr-2 items-center gap-1.5">
+                <div className={cn("w-2 h-2 rounded-full", formData.title && formData.price ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]")} />
+                {formData.title && formData.price ? "Ready to Save" : "Pending Fields"}
+              </span>
+              <Button onClick={() => handleSubmit()} disabled={saving} className="w-full sm:w-auto rounded-xl shadow-lg shadow-purple-500/20 bg-purple-600 text-white hover:bg-purple-500 font-bold tracking-wide border border-purple-500/50">
+                {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : <Save className="mr-2 h-4 w-4"/>}
+                {isNew ? "Terbitkan Layanan" : "Simpan Perubahan"}
+              </Button>
+            </div>
           </div>
         </header>
 
-        <main className="container-width py-6 md:py-8 max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 relative z-10">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-red-400 text-sm mb-8 flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* --- VISUAL & BASIC INFO --- */}
-            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 space-y-6">
-              <h3 className="text-lg font-bold border-b border-white/10 pb-3 mb-2 flex items-center gap-2">
-                <ImageIcon size={20} className="text-accent" /> Visual & Info Utama
-              </h3>
-
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Thumbnail URL (Imgur)</label>
-                <input 
-                  className="input-field" 
-                  placeholder="https://i.imgur.com/..."
-                  value={formData.thumbnail || ""} 
-                  onChange={e => setFormData({...formData, thumbnail: e.target.value})} 
-                />
-                <p className="text-xs text-muted-foreground/80 italic">
-                  * Disarankan rasio 1:1 (Square) atau 4:3. Minimal 500x500px agar tajam.
-                </p>
-                {formData.thumbnail && (
-                  <div className="mt-2 relative h-48 w-full rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-lg">
-                    <img 
-                      src={formData.thumbnail} 
-                      alt="Preview" 
-                      className="w-full h-full object-cover"
-                      onError={(e) => (e.currentTarget.src = "/placeholder-image.png")}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Product Title</label>
-                  <input required className="input-field font-bold text-lg" placeholder="e.g. Landing Page UMKM"
-                    value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Category</label>
-                  <select className="input-field h-12" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value as any})}>
-                    <option value="frontend">Frontend</option>
-                    <option value="backend">Backend</option>
-                    <option value="fullstack">Fullstack</option>
-                    <option value="maintenance">Maintenance</option>
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            {/* --- PRICING & PROMOTION --- */}
-            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 space-y-6">
-              <h3 className="text-lg font-bold border-b border-white/10 pb-3 mb-2 flex items-center gap-2">
-                <Calculator size={20} className="text-primary" /> Pricing & Promo
-              </h3>
+            {/* ======================================================== */}
+            {/* KOLOM KIRI: EDITOR FORM (Col 8) */}
+            {/* ======================================================== */}
+            <div className="lg:col-span-8 flex flex-col gap-6">
               
-              {!formData.isFlashSale && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-primary ml-1">Harga Jual (Final Price)</label>
-                    <input 
-                      required 
-                      className="input-field text-lg text-primary font-bold border-primary/30" 
-                      placeholder="e.g. Rp 999.000"
-                      value={formData.price || ""} 
-                      onChange={handlePriceChange} 
-                    />
-                    <p className="text-xs text-muted-foreground">Harga ini yang akan dibayar klien.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Estimasi Pengerjaan</label>
-                    <input required className="input-field" placeholder="e.g. 2-3 Hari Kerja"
-                      value={formData.duration || ""} onChange={e => setFormData({...formData, duration: e.target.value})} 
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 1. Toggle Diskon */}
-              <div className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-4 transition-all">
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" id="activeDiscount" 
-                    className="w-5 h-5 rounded bg-black/20 border-white/10 text-orange-500 focus:ring-orange-500"
-                    checked={isDiscountActive}
-                    onChange={e => setIsDiscountActive(e.target.checked)}
-                  />
-                  <label htmlFor="activeDiscount" className="text-sm font-bold text-orange-400 cursor-pointer select-none flex items-center gap-2">
-                    <Percent size={16} /> Aktifkan Diskon (Coret Harga)
-                  </label>
-                </div>
-
-                {isDiscountActive && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-top-2 pl-4 border-l-2 border-orange-500/20">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-orange-200 uppercase tracking-wider">Harga Asli (Sebelum Diskon)</label>
-                      <input 
-                        className="input-field border-orange-500/30 focus:border-orange-500" 
-                        placeholder="e.g. Rp 2.000.000"
-                        value={formData.originalPrice || ""} 
-                        onChange={handleOriginalPriceChange} 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-orange-200 uppercase tracking-wider">Besar Diskon (%)</label>
-                      <input 
-                        type="number" 
-                        min="0" max="100"
-                        className="input-field border-orange-500/30 focus:border-orange-500" 
-                        placeholder="e.g. 50"
-                        value={formData.discountValue || 0} 
-                        onChange={handleDiscountChange} 
-                      />
-                    </div>
-                  </div>
-                )}
+              {/* Premium Tab Navigation */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-1.5 flex overflow-x-auto [&::-webkit-scrollbar]:hidden shadow-inner sticky top-[88px] z-40 backdrop-blur-xl">
+                <TabBtn active={activeTab === "general"} onClick={() => setActiveTab("general")} icon={<LayoutGrid size={14} />} label="Info Utama" />
+                <TabBtn active={activeTab === "pricing"} onClick={() => setActiveTab("pricing")} icon={<Calculator size={14} />} label="Harga & Promo" />
+                <TabBtn active={activeTab === "content"} onClick={() => setActiveTab("content")} icon={<FileText size={14} />} label="Konten & Fitur" />
               </div>
 
-              {/* 2. Toggle Flash Sale */}
-              <div className="bg-black/20 p-4 rounded-xl border border-white/5 transition-all">
-                <div className="flex items-center gap-2 mb-4">
-                  <input 
-                    type="checkbox" id="flashSale" 
-                    className="w-5 h-5 rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500"
-                    checked={!!formData.isFlashSale}
-                    onChange={e => setFormData({...formData, isFlashSale: e.target.checked})}
-                  />
-                  <label htmlFor="flashSale" className="text-sm font-bold text-red-400 cursor-pointer select-none flex items-center gap-2">
-                    <Zap size={16} /> Aktifkan Flash Sale
-                  </label>
-                </div>
-
-                {formData.isFlashSale && (
-                  <div className="space-y-5 animate-in fade-in slide-in-from-top-2 pl-4 border-l-2 border-red-500/20">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-red-300 uppercase tracking-wider">Harga Flash Sale (IDR)</label>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 md:p-8 shadow-xl min-h-[500px]"
+                >
+                  {/* --- TAB: GENERAL INFO --- */}
+                  {activeTab === "general" && (
+                    <div className="space-y-8">
+                      <div className="space-y-3">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Thumbnail Latar Belakang (Imgur)</label>
                         <input 
-                          required 
-                          className="input-field text-lg text-red-400 font-bold border-red-500/30 focus:border-red-500 bg-red-950/20" 
-                          placeholder="e.g. Rp 999.000"
-                          value={formData.price || ""} 
-                          onChange={handlePriceChange} 
+                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white placeholder:text-gray-700 text-sm" 
+                          placeholder="https://i.imgur.com/... (Disarankan Abstract/Gradient Tech)"
+                          value={formData.thumbnail || ""} 
+                          onChange={e => setFormData({...formData, thumbnail: e.target.value})} 
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-red-300 uppercase tracking-wider">Berakhir Pada (Durasi)</label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-red-400 w-4 h-4" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/10">
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Nama Paket Layanan *</label>
                           <input 
-                            type="datetime-local"
-                            className="input-field pl-10 border-red-500/30 focus:border-red-500 text-sm" 
-                            value={formData.flashSaleEndDate || ""} 
-                            onChange={e => setFormData({...formData, flashSaleEndDate: e.target.value})} 
+                            required 
+                            className="w-full px-4 py-3 md:py-4 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white font-bold text-xl md:text-3xl placeholder:text-gray-700" 
+                            placeholder="Contoh: Landing Page Eksekutif"
+                            value={formData.title || ""} 
+                            onChange={e => setFormData({...formData, title: e.target.value})} 
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Kategori</label>
+                          <select 
+                            className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white appearance-none cursor-pointer" 
+                            value={formData.category} 
+                            onChange={e => setFormData({...formData, category: e.target.value as any})}
+                          >
+                            <option value="frontend" className="bg-[#111]">Frontend Development</option>
+                            <option value="backend" className="bg-[#111]">Backend & API</option>
+                            <option value="fullstack" className="bg-[#111]">Fullstack App</option>
+                            <option value="maintenance" className="bg-[#111]">Maintenance & Support</option>
+                            <option value="uiux" className="bg-[#111]">UI/UX Design</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Estimasi Pengerjaan *</label>
+                          <div className="relative">
+                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <input 
+                              required 
+                              className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white placeholder:text-gray-700 text-sm" 
+                              placeholder="Contoh: 2-3 Hari Kerja"
+                              value={formData.duration || ""} 
+                              onChange={e => setFormData({...formData, duration: e.target.value})} 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Deskripsi Singkat (Short Desc)</label>
+                          <textarea 
+                            required 
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-gray-300 min-h-[100px] resize-none placeholder:text-gray-700 leading-relaxed text-sm" 
+                            placeholder="Tuliskan 1-2 kalimat menarik untuk ditampilkan di dalam kartu katalog..."
+                            value={formData.shortDesc || ""} 
+                            onChange={e => setFormData({...formData, shortDesc: e.target.value})} 
                           />
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Estimasi Pengerjaan (Flash Sale)</label>
-                      <input required className="input-field" placeholder="e.g. 2-3 Hari Kerja"
-                        value={formData.duration || ""} onChange={e => setFormData({...formData, duration: e.target.value})} 
-                      />
+                  )}
+
+                  {/* --- TAB: PRICING & PROMO --- */}
+                  {activeTab === "pricing" && (
+                    <div className="space-y-8">
+                      
+                      {/* Base Price */}
+                      <div className="p-6 md:p-8 bg-purple-500/5 border border-purple-500/20 rounded-2xl relative overflow-hidden">
+                        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-purple-500/10 blur-[40px] rounded-full pointer-events-none" />
+                        <div className="space-y-3 relative z-10">
+                          <label className="text-xs font-bold uppercase tracking-wider text-purple-300 ml-1">Harga Jual / Harga Akhir (IDR) *</label>
+                          <input 
+                            required 
+                            className="w-full px-5 py-4 rounded-xl bg-black/40 border border-purple-500/30 focus:border-purple-400 outline-none transition-colors text-white font-mono font-bold text-2xl md:text-3xl placeholder:text-gray-700" 
+                            placeholder="Rp 0"
+                            value={formData.price || ""} 
+                            onChange={handlePriceChange} 
+                          />
+                          <p className="text-xs text-gray-400">Harga ini adalah nominal final yang akan ditampilkan utama ke klien.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                        {/* 1. Toggle Diskon */}
+                        <div className={cn(
+                          "p-5 rounded-2xl border transition-all duration-300",
+                          isDiscountActive ? "bg-orange-500/5 border-orange-500/30 shadow-[0_0_20px_-5px_rgba(249,115,22,0.15)]" : "bg-white/[0.02] border-white/5"
+                        )}>
+                          <div className="flex items-center gap-3 mb-6">
+                            <input 
+                              type="checkbox" id="activeDiscount" 
+                              className="w-5 h-5 rounded bg-black/20 border-white/10 text-orange-500 focus:ring-orange-500"
+                              checked={isDiscountActive}
+                              onChange={e => setIsDiscountActive(e.target.checked)}
+                            />
+                            <label htmlFor="activeDiscount" className={cn("text-sm font-bold cursor-pointer select-none flex items-center gap-2", isDiscountActive ? "text-orange-400" : "text-gray-400")}>
+                              <Percent size={16} /> Mode Harga Coret
+                            </label>
+                          </div>
+
+                          {isDiscountActive && (
+                            <div className="space-y-4 animate-in fade-in">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-orange-200/70 uppercase tracking-wider">Harga Asli (Sebelum Diskon)</label>
+                                <input 
+                                  className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-orange-500/20 focus:border-orange-500 outline-none transition-colors text-gray-300 font-mono text-sm" 
+                                  placeholder="Rp 0"
+                                  value={formData.originalPrice || ""} 
+                                  onChange={handleOriginalPriceChange} 
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-orange-200/70 uppercase tracking-wider">Persentase Diskon (%)</label>
+                                <input 
+                                  type="number" min="0" max="100"
+                                  className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-orange-500/20 focus:border-orange-500 outline-none transition-colors text-orange-300 font-bold text-sm" 
+                                  placeholder="0"
+                                  value={formData.discountValue || 0} 
+                                  onChange={handleDiscountChange} 
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Toggle Flash Sale */}
+                        <div className={cn(
+                          "p-5 rounded-2xl border transition-all duration-300",
+                          formData.isFlashSale ? "bg-red-500/5 border-red-500/30 shadow-[0_0_20px_-5px_rgba(239,68,68,0.15)]" : "bg-white/[0.02] border-white/5"
+                        )}>
+                          <div className="flex items-center gap-3 mb-6">
+                            <input 
+                              type="checkbox" id="flashSale" 
+                              className="w-5 h-5 rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500"
+                              checked={!!formData.isFlashSale}
+                              onChange={e => setFormData({...formData, isFlashSale: e.target.checked})}
+                            />
+                            <label htmlFor="flashSale" className={cn("text-sm font-bold cursor-pointer select-none flex items-center gap-2", formData.isFlashSale ? "text-red-400" : "text-gray-400")}>
+                              <Zap size={16} /> Status Flash Sale
+                            </label>
+                          </div>
+
+                          {formData.isFlashSale && (
+                            <div className="space-y-4 animate-in fade-in">
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-red-200/70 uppercase tracking-wider">Tenggat Waktu Penawaran</label>
+                                <input 
+                                  type="datetime-local"
+                                  className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-red-500/20 focus:border-red-500 outline-none transition-colors text-gray-300 font-mono text-sm" 
+                                  value={formData.flashSaleEndDate || ""} 
+                                  onChange={e => setFormData({...formData, flashSaleEndDate: e.target.value})} 
+                                />
+                              </div>
+                              <p className="text-xs text-red-400/80 leading-relaxed italic mt-2">
+                                * Akan mengaktifkan efek merah menyala dan countdown timer di halaman utama.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Other Metrics */}
+                      <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/10">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Rating Bintang (0.0 - 5.0)</label>
+                          <input 
+                            type="number" step="0.1" min="0" max="5" 
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-yellow-400 font-bold text-sm" 
+                            value={formData.rating || 0} 
+                            onChange={e => setFormData({...formData, rating: parseFloat(e.target.value)})} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Angka Penjualan (Mockup)</label>
+                          <input 
+                            type="number" min="0" 
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white font-bold text-sm" 
+                            value={formData.sales || 0} 
+                            onChange={e => setFormData({...formData, sales: parseInt(e.target.value)})} 
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+
+                  {/* --- TAB: CONTENT & FEATURES --- */}
+                  {activeTab === "content" && (
+                    <div className="space-y-8">
+                      
+                      <div className="p-5 md:p-6 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                        <div>
+                          <h4 className="text-white font-bold mb-1 flex items-center gap-2">
+                            <Star size={16} className="text-yellow-400"/> Highlight sebagai Pilihan Utama
+                          </h4>
+                          <p className="text-xs text-gray-500">Tandai layanan ini dengan badge "Recommended".</p>
+                        </div>
+                        <div 
+                          className={cn(
+                            "relative flex items-center w-14 h-8 rounded-full p-1 cursor-pointer transition-colors border shrink-0",
+                            formData.recommended ? "bg-yellow-500/20 border-yellow-500/50" : "bg-white/5 border-white/10"
+                          )}
+                          onClick={() => setFormData({...formData, recommended: !formData.recommended})}
+                        >
+                          <div className={cn(
+                            "absolute w-6 h-6 rounded-full transition-transform duration-300 ease-in-out shadow-md",
+                            formData.recommended ? "translate-x-6 bg-yellow-400" : "translate-x-0 bg-gray-500"
+                          )} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Deskripsi Lengkap (Rich Text)</label>
+                        <div className="min-h-[300px]">
+                          <TiptapEditor 
+                            content={formData.description || ""} 
+                            onChange={(html) => setFormData({...formData, description: html})} 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-6 border-t border-white/10">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1 flex items-center gap-2">
+                          <CheckCircle2 size={14} className="text-emerald-400"/> Daftar Fitur Paket (Bullet Points)
+                        </label>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <input 
+                            className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white text-sm" 
+                            placeholder="Contoh: Gratis domain & hosting 1 tahun..."
+                            value={featureInput} 
+                            onChange={e => setFeatureInput(e.target.value)} 
+                            onKeyDown={e => e.key === "Enter" && addFeature(e)}
+                          />
+                          <Button type="button" onClick={addFeature} className="h-11 sm:h-auto rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 px-6 shrink-0">
+                            Tambah <Plus size={16} className="ml-1.5"/>
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2 mt-4">
+                          {formData.features?.map((feat, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-black/20 px-4 py-3 rounded-xl border border-white/5 group hover:border-white/10 transition-colors">
+                              <span className="text-sm text-gray-300 flex items-center gap-3">
+                                <CheckCircle2 size={16} className="text-emerald-500/50 group-hover:text-emerald-400 transition-colors" /> {feat}
+                              </span>
+                              <button type="button" onClick={() => removeFeature(idx)} className="text-red-500/50 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg transition-colors">
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                          {(!formData.features || formData.features.length === 0) && (
+                            <div className="text-center p-8 border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
+                              <p className="text-sm text-gray-600 italic">Belum ada fitur layanan yang ditambahkan.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* ======================================================== */}
+            {/* KOLOM KANAN: LIVE PREVIEW (Col 4) */}
+            {/* ======================================================== */}
+            <div className="lg:col-span-4 relative hidden sm:block">
+              <div className="lg:sticky lg:top-32 flex flex-col gap-6">
+                
+                <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-5 shadow-xl">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+                    <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <MonitorPlay size={16} className="text-purple-400"/> Live Card Preview
+                    </h3>
+                  </div>
+
+                  {/* UI Render Card Preview (Mirip di Halaman Katalog) */}
+                  <div className="pointer-events-none select-none scale-[0.95] origin-top">
+                    <div className={cn(
+                      "group relative bg-[#0a0a0a] rounded-3xl border overflow-hidden flex flex-col transition-all duration-500 shadow-xl",
+                      formData.isFlashSale ? "border-red-500/50 shadow-[0_0_30px_-10px_rgba(239,68,68,0.2)]" : 
+                      formData.recommended ? "border-yellow-500/50 shadow-[0_0_30px_-10px_rgba(234,179,8,0.2)]" : 
+                      "border-white/10"
+                    )}>
+                      
+                      {/* Background Soft Glow */}
+                      {(formData.isFlashSale || formData.recommended) && (
+                        <div className={cn(
+                          "absolute top-0 right-0 w-32 h-32 blur-3xl opacity-20 pointer-events-none rounded-full",
+                          formData.isFlashSale ? "bg-red-500" : "bg-yellow-500"
+                        )} />
+                      )}
+
+                      <div className="relative aspect-[4/3] overflow-hidden bg-[#0d1117] border-b border-white/5 shrink-0">
+                        {formData.thumbnail ? (
+                          <img src={formData.thumbnail} alt="Thumbnail" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.1] flex items-center justify-center">
+                            <ImageIcon size={48} className="text-white/20" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-black/20 to-transparent opacity-80" />
+                        
+                        <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
+                          <div className="flex flex-col gap-2">
+                            {formData.recommended && !formData.isFlashSale && (
+                              <span className="bg-yellow-500/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 uppercase tracking-wider">
+                                <Star size={10} className="fill-white" /> Rekomendasi
+                              </span>
+                            )}
+                            {formData.isFlashSale && (
+                              <span className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 uppercase tracking-wider">
+                                <Zap size={10} className="fill-white" /> Flash Sale
+                              </span>
+                            )}
+                          </div>
+                          {isDiscountActive && formData.discountValue ? (
+                            <div className={cn(
+                              "text-white text-xs font-bold px-2.5 py-1.5 rounded-md shadow-lg flex flex-col items-center leading-none",
+                              formData.isFlashSale ? "bg-red-500/90 backdrop-blur-md" : "bg-orange-500/90 backdrop-blur-md"
+                            )}>
+                              <span className="text-sm">{formData.discountValue}%</span>
+                              <span className="text-[8px] uppercase tracking-widest mt-0.5">OFF</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="p-5 flex flex-col flex-grow relative z-10">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+                            {formData.category || "Kategori"}
+                          </span>
+                          <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
+                            <Star size={10} className="fill-yellow-400" /> {(formData.rating ?? 0) > 0 ? formData.rating : "New"}
+                          </div>
+                        </div>
+
+                        <h3 className="font-heading font-bold text-lg text-white mb-2 leading-snug">
+                          {formData.title || "Judul Paket Layanan"}
+                        </h3>
+                        <p className="text-sm text-gray-400 line-clamp-2 mb-6 leading-relaxed font-light">
+                          {formData.shortDesc || "Deskripsi singkat mengenai layanan yang Anda tawarkan akan muncul di sini."}
+                        </p>
+
+                        <div className="mt-auto pt-4 border-t border-white/10 flex items-end justify-between">
+                          <div className="flex flex-col">
+                            {isDiscountActive && formData.originalPrice ? (
+                              <>
+                                <span className="text-[10px] text-gray-500 line-through decoration-red-500/50 mb-0.5">{formData.originalPrice}</span>
+                                <span className={cn("text-xl font-bold font-mono tracking-tight", formData.isFlashSale ? "text-red-400" : "text-white")}>{formData.price || "Rp 0"}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[9px] text-gray-500 uppercase tracking-widest mb-0.5">Mulai Dari</span>
+                                <span className="text-xl font-bold font-mono tracking-tight text-white">{formData.price || "Rp 0"}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Rating & Sales */}
-              <div className="grid grid-cols-2 gap-5 pt-4 border-t border-white/5 mt-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Rating (0-5)</label>
-                  <input type="number" step="0.1" min="0" max="5" className="input-field" 
-                    value={formData.rating || 0} onChange={e => setFormData({...formData, rating: parseFloat(e.target.value)})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Total Sales</label>
-                  <input type="number" min="0" className="input-field" 
-                    value={formData.sales || 0} onChange={e => setFormData({...formData, sales: parseInt(e.target.value)})} 
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* --- DETAILS --- */}
-            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 space-y-6">
-              <h3 className="text-lg font-bold border-b border-white/10 pb-3 mb-2">Product Details</h3>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Short Description (For Card)</label>
-                <textarea required className="input-field min-h-[100px] leading-relaxed" placeholder="Deskripsi singkat max 2 kalimat..."
-                  value={formData.shortDesc || ""} onChange={e => setFormData({...formData, shortDesc: e.target.value})} 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Full Description (Rich Text)</label>
-                <div className="min-h-[200px]">
-                  <TiptapEditor 
-                    content={formData.description || ""} 
-                    onChange={(html) => setFormData({...formData, description: html})} 
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3 border-t border-white/10 pt-4 mt-4">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Features List</label>
-                <div className="flex gap-2">
-                  <input 
-                    className="input-field" 
-                    placeholder="Add feature..."
-                    value={featureInput} 
-                    onChange={e => setFeatureInput(e.target.value)} 
-                    onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFeature())}
-                  />
-                  <Button type="button" onClick={addFeature} variant="secondary" className="px-3"><Plus size={18}/></Button>
-                </div>
-                
-                <div className="space-y-2 mt-2">
-                  {formData.features?.map((feat, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5 group">
-                      <span className="text-sm">{feat}</span>
-                      <button type="button" onClick={() => removeFeature(idx)} className="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/10 rounded transition-colors">
-                        <X size={16} />
-                      </button>
+                  {/* Summary Meta */}
+                  <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-500 font-mono">Durasi</span>
+                      <span className="text-gray-300 font-medium">{formData.duration || "-"}</span>
                     </div>
-                  ))}
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-500 font-mono">Fitur</span>
+                      <span className="text-gray-300 font-medium">{formData.features?.length || 0} Item</span>
+                    </div>
+                  </div>
+
                 </div>
               </div>
-            </section>
-
-            {/* --- STATUS --- */}
-            <section className="bg-secondary/5 p-5 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <input 
-                  type="checkbox" id="rec" 
-                  className="w-5 h-5 rounded bg-black/20 border-white/10 text-primary focus:ring-primary"
-                  checked={!!formData.recommended}
-                  onChange={e => setFormData({...formData, recommended: e.target.checked})}
-                />
-                <label htmlFor="rec" className="text-sm font-bold cursor-pointer select-none">Mark as Recommended</label>
-              </div>
-            </section>
+            </div>
 
             {/* Mobile Sticky Action Bar */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur border-t border-white/10 z-40 flex gap-3">
               {!isNew && (
                 <Button type="button" variant="destructive" size="lg" className="flex-1" onClick={handleDelete}>
-                  <Trash size={18} />
+                  <Trash2 size={18} />
                 </Button>
               )}
-              <Button type="submit" size="lg" className="flex-[3] shadow-xl shadow-primary/20" disabled={saving}>
+              <Button type="button" onClick={() => handleSubmit()} size="lg" className="flex-[3] shadow-xl shadow-purple-500/20 bg-purple-600 hover:bg-purple-500 border border-purple-500/50 text-white" disabled={saving}>
                 {saving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
-                Save Product
+                {isNew ? "Terbitkan" : "Simpan"}
               </Button>
             </div>
 
-            {/* Desktop Submit Button */}
-            <div className="hidden md:flex justify-end pt-4">
-              <Button type="submit" size="lg" className="min-w-[150px] shadow-xl shadow-primary/20" disabled={saving}>
-                {saving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
-                Save Product
-              </Button>
-            </div>
-
-          </form>
+          </div>
         </main>
       </div>
     </ProtectedRoute>
+  );
+}
+
+// --- SUB-COMPONENTS ---
+function TabBtn({ active, onClick, icon, label }: any) {
+  return (
+    <button
+      onClick={(e) => { e.preventDefault(); onClick(); }}
+      className={cn(
+        "relative flex items-center justify-center gap-2 py-2 px-4 text-xs md:text-sm font-medium transition-colors whitespace-nowrap outline-none rounded-xl",
+        active 
+          ? "text-white font-bold bg-white/10" 
+          : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]"
+      )}
+    >
+      <span className={cn(active ? "text-purple-400" : "opacity-70")}>{icon}</span>
+      {label}
+    </button>
   );
 }
