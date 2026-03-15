@@ -94,62 +94,70 @@ export default function ProjectsPage() {
 
       <div className="relative z-10 w-full pt-28 md:pt-40">
         
-        {/* --- 1. HERO SECTION (EDITORIAL STYLE + LATEST PROJECT) --- */}
+        {/* --- 1. HERO SECTION (DASHBOARD BANNER STYLE) --- */}
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12 md:mb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            
-            {/* Kiri: Title & Desc */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="lg:col-span-7 flex flex-col items-start"
-            >
-              <div className="flex items-center gap-2 text-primary font-mono text-sm uppercase tracking-widest mb-6">
-                <Sparkles size={16} /> Portfolio // {new Date().getFullYear()}
-              </div>
-              <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter leading-[0.9] mb-6 text-white">
-                Creative <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-500 to-gray-200">
-                  Masterpieces.
-                </span>
-              </h1>
-              <p className="text-gray-400 text-lg md:text-xl max-w-2xl font-light leading-relaxed">
-                Koleksi eksklusif dari {loading ? "..." : projects.length} proyek terbaik. Mewujudkan ide kompleks menjadi eksekusi digital yang brilian dan estetis.
-              </p>
-            </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="w-full bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-6 sm:p-10 md:p-12 relative overflow-hidden shadow-2xl"
+          >
+            {/* Ambient Background & Texture */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/4" />
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
-            {/* Kanan: Latest Project Showcase */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              className="lg:col-span-5 relative w-full"
-            >
-              {loading ? (
-                <div className="w-full h-[350px] bg-white/5 rounded-3xl animate-pulse border border-white/10" />
-              ) : projects.length > 0 ? (
-                <div 
-                  className="relative group cursor-pointer touch-manipulation" 
-                  onClick={(e) => handleProjectClick(e, projects[0].id)}
-                >
-                  {/* Badge Terbaru */}
-                  <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary text-white text-[10px] md:text-xs font-bold px-4 py-2 rounded-full shadow-xl shadow-primary/30 uppercase tracking-widest flex items-center gap-1.5 border border-primary/50">
-                    <Sparkles size={14} className="fill-white" /> Project Terbaru
-                  </div>
-
-                  {/* Card Container */}
-                  <div className="relative z-10 transition-transform duration-500 group-hover:-translate-y-2">
-                    <ProjectCard project={projects[0] as any} />
-                  </div>
-
-                  {/* Dekorasi Background Glow */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-primary/20 blur-[80px] rounded-full -z-10 group-hover:bg-primary/30 transition-colors duration-500" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center relative z-10">
+              
+              {/* Kiri: Title & Desc */}
+              <div className="lg:col-span-7 flex flex-col items-start">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm mb-6 w-fit">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  <span className="text-xs font-medium tracking-wide text-primary-foreground/80 uppercase">
+                    Portfolio // {new Date().getFullYear()}
+                  </span>
                 </div>
-              ) : null}
-            </motion.div>
 
-          </div>
+                <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6 text-white">
+                  Creative <br className="hidden sm:block" />
+                  <span className="text-gradient-primary">Masterpieces.</span>
+                </h1>
+                
+                <p className="text-gray-400 text-base md:text-lg max-w-2xl font-light leading-relaxed">
+                  Koleksi eksklusif dari {loading ? "..." : projects.length} proyek terbaik. Mewujudkan ide kompleks menjadi eksekusi digital yang brilian dan estetis.
+                </p>
+              </div>
+
+              {/* Kanan: Latest Project Showcase */}
+              <div className="lg:col-span-5 relative w-full">
+                {loading ? (
+                  <div className="w-full h-[350px] bg-white/5 rounded-3xl animate-pulse border border-white/10" />
+                ) : projects.length > 0 ? (
+                  <div 
+                    className="relative group cursor-pointer touch-manipulation" 
+                    onClick={(e) => handleProjectClick(e, projects[0].id)}
+                  >
+                    {/* Badge Terbaru */}
+                    <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary text-white text-[10px] md:text-xs font-bold px-4 py-2 rounded-full shadow-xl shadow-primary/30 uppercase tracking-widest flex items-center gap-1.5 border border-primary/50">
+                      <Sparkles size={14} className="fill-white" /> Project Terbaru
+                    </div>
+
+                    {/* Card Container */}
+                    <div className="relative z-10 transition-transform duration-500 group-hover:-translate-y-2">
+                      <ProjectCard project={projects[0] as any} />
+                    </div>
+
+                    {/* Dekorasi Background Glow */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-primary/20 blur-[80px] rounded-full -z-10 group-hover:bg-primary/30 transition-colors duration-500" />
+                  </div>
+                ) : null}
+              </div>
+
+            </div>
+          </motion.div>
         </div>
 
         {/* --- 2. STUDIO CONTROL BAR (STATIC/NOT STICKY) --- */}
@@ -246,7 +254,6 @@ export default function ProjectsPage() {
                         stiffness: 100 
                       }}
                     >
-                      {/* Kita memanfaatkan komponen ProjectCard buatan lu, tapi kita bungkus biar interaksinya lebih mewah */}
                       <div className="transition-transform duration-500 group-hover:-translate-y-2 h-full">
                         <ProjectCard project={project as any} />
                       </div>

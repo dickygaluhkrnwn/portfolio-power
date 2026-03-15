@@ -107,10 +107,11 @@ export default function BlogPage() {
         <div className="absolute bottom-[20%] left-[-10%] w-[400px] h-[400px] bg-accent/5 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      <div className="relative z-10 w-full">
+      {/* Disamakan spasi atasnya dengan halaman Projects/Services: pt-28 md:pt-40 */}
+      <div className="relative z-10 w-full pt-28 md:pt-40">
         
         {/* --- 1. HERO FEATURED SLIDER (Satu per Satu) --- */}
-        <div className="container max-w-6xl mx-auto px-4 sm:px-6 pt-24 md:pt-32 mb-12">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12 md:mb-20">
           {loading ? (
             <div className="w-full h-[350px] md:h-[480px] bg-white/5 rounded-[2rem] animate-pulse border border-white/10" />
           ) : featuredPosts.length > 0 ? (
@@ -181,7 +182,7 @@ export default function BlogPage() {
           ) : null}
         </div>
 
-        <div className="container max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
           {/* --- 2. CONTROLS BAR (Search, Filter, Sort, View) --- */}
           <div className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl mb-10 flex flex-col gap-5 shadow-2xl relative z-20">
             

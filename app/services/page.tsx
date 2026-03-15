@@ -91,10 +91,11 @@ export default function ServicesPage() {
         <div className="absolute bottom-[10%] left-[-10%] w-[400px] h-[400px] bg-accent/5 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      <div className="relative z-10 w-full">
+      {/* Disamakan spasi atasnya dengan halaman Projects: pt-28 md:pt-40 */}
+      <div className="relative z-10 w-full pt-28 md:pt-40">
         
         {/* --- 1. HERO FEATURED SLIDER (Marketplace Banner) --- */}
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 md:pt-32 mb-12">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12 md:mb-20">
           {loading ? (
             <div className="w-full h-[350px] md:h-[480px] bg-white/5 rounded-[2rem] animate-pulse border border-white/10" />
           ) : featuredServices.length > 0 ? (

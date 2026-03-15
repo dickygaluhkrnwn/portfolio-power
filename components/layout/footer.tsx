@@ -6,7 +6,8 @@ export function Footer() {
 
   return (
     <footer className="w-full border-t border-white/5 bg-[#050505]/80 backdrop-blur-xl relative z-20 mt-10">
-      <div className="container max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-8">
+      {/* Max-w-7xl biar rata sama semua konten */}
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-8">
         
         {/* Top Section */}
         <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 text-center md:text-left">

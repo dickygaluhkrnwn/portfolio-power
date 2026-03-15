@@ -71,7 +71,8 @@ export default function AboutPage() {
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      <div className="container max-w-5xl mx-auto pt-24 pb-16 md:pt-32 px-4 sm:px-6 relative z-10">
+      {/* BERIKUT INI PERUBAHANNYA DARI max-w-5xl MENJADI max-w-7xl */}
+      <div className="container max-w-7xl mx-auto pt-24 pb-16 md:pt-32 px-4 sm:px-6 relative z-10">
         
         {/* --- 1. HERO SECTION (Split Layout for Quote) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch mb-16 md:mb-20">
