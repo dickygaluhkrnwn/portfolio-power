@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Code2, Sparkles, BookOpen, Briefcase, Download } from "lucide-react"; 
+import { Menu, X, BookOpen, Briefcase, Download, Sparkles } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +20,7 @@ const navItems = [
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // State untuk install prompt
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
   const pathname = usePathname();
 
@@ -30,7 +30,6 @@ export function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
 
-    // --- PWA Install Logic ---
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -44,6 +43,18 @@ export function Navbar() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
+
+  // Lock body scroll saat mobile menu terbuka
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -119,7 +130,6 @@ export function Navbar() {
 
           {/* --- RIGHT ACTION --- */}
           <div className="flex items-center gap-3 shrink-0">
-            {/* Install Button (Desktop) */}
             {showInstallBtn && (
               <Button
                 size="sm"
@@ -154,37 +164,38 @@ export function Navbar() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
-            animate={{ opacity: 1, clipPath: "circle(150% at 100% 0%)" }}
-            exit={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[60] bg-[#050505]/95 backdrop-blur-2xl flex flex-col items-center justify-center"
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(24px)" }}
+            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[100] bg-[#050505]/98 overflow-y-auto"
           >
             {/* Background Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
 
             <button
-              className="absolute top-6 right-6 text-gray-400 p-2 hover:bg-white/10 hover:text-white rounded-full transition-colors"
+              className="absolute top-6 right-6 text-gray-400 p-2 hover:bg-white/10 hover:text-white rounded-full transition-colors z-50"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <X size={28} />
             </button>
 
-            <div className="flex flex-col items-center gap-6 w-full px-6 relative z-10">
+            {/* Diubah jadi min-h-screen agar tidak bug di mobile browser */}
+            <div className="flex flex-col items-center justify-center min-h-screen py-24 px-6 relative z-10 w-full">
               {navItems.map((item, idx) => (
                 <motion.div
                   key={item.path}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ delay: 0.05 * idx }}
-                  className="w-full text-center"
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  className="w-full text-center py-3"
                 >
                   <Link
                     href={item.path}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      "block font-heading text-4xl sm:text-5xl font-bold tracking-tight transition-all duration-300 py-2",
+                      "inline-block font-heading text-4xl sm:text-5xl font-bold tracking-tight transition-all duration-300",
                       pathname === item.path
                         ? "text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent scale-110"
                         : "text-gray-400 hover:text-white hover:scale-105"
@@ -195,12 +206,11 @@ export function Navbar() {
                 </motion.div>
               ))}
 
-              {/* Resume & Install Buttons (Mobile Menu) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="mt-8 flex flex-col gap-4 w-full max-w-xs"
+                transition={{ duration: 0.3, delay: 0.3 }}
+                className="mt-10 flex flex-col gap-4 w-full max-w-xs"
               >
                 <Button
                   variant="outline"
