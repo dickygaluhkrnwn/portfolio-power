@@ -26,10 +26,11 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 // --- SEO & PWA CONFIGURATION ---
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dickygaluh.com";
+// Kita paksakan menggunakan versi www agar sesuai dengan preferensi Google Search Console
+const siteUrl = "https://www.dickygaluhkrnwn.my.id";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl), // Sangat penting untuk SEO dan resolusi URL relatif
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Dicky Galuh Kurniawan | Full Stack Developer",
     template: "%s | IKY Dev.",
@@ -79,20 +80,19 @@ export const metadata: Metadata = {
       },
     ],
   },
-  // Konfigurasi khusus Apple Device agar terasa seperti Native App
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "IKY Dev.", // Nama aplikasi di iOS Home Screen
+    title: "IKY Dev.",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a", // Warna bar browser di HP menyatu dengan background
+  themeColor: "#0a0a0a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, // Mencegah zoom in/out yang tidak sengaja (App-like feel)
+  userScalable: false,
 };
 
 export default function RootLayout({
