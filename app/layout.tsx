@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
+// Menggunakan relative path untuk menghindari error TS pada file CSS
+// @ts-ignore: CSS module type declarations may be missing in some environments
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger"; 
