@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, Save, Loader2, Plus, X, Image as ImageIcon, 
   Calendar, Tag, Trash2, FileText, Settings, 
-  MonitorPlay, CheckCircle2, Clock, Globe
+  MonitorPlay, CheckCircle2, Clock, Globe, UploadCloud
 } from "lucide-react";
 import { getPostById, savePost, deletePost, BlogPost } from "@/lib/blog-service";
 import TiptapEditor from "@/components/ui/tiptap-editor";
@@ -41,6 +41,10 @@ export default function BlogPostForm() {
   // Advanced UI State
   const [activeTab, setActiveTab] = useState<TabType>("content");
   const [tagInput, setTagInput] = useState("");
+
+  // Cloudinary State
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isNew && id) {
@@ -137,6 +141,63 @@ export default function BlogPostForm() {
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = new Date(e.target.value);
     setFormData(prev => ({ ...prev, publishedAt: date.toISOString() }));
+  };
+
+  // --- Cloudinary Upload Handler ---
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validasi tipe file
+    if (!file.type.startsWith('image/')) {
+      setError("File yang diupload harus berupa gambar.");
+      return;
+    }
+
+    // Validasi ukuran (misal max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Ukuran gambar maksimal 5MB.");
+      return;
+    }
+
+    setUploadingImage(true);
+    setError(null);
+
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+    // Optional: Tambahkan folder spesifik jika diperlukan
+    // data.append("folder", "portfolio_images/blog");
+
+    try {
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: data,
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Gagal mengunggah gambar ke Cloudinary");
+      }
+
+      const fileData = await res.json();
+      
+      // Update form data dengan URL dari Cloudinary
+      // Menggunakan secure_url agar selalu menggunakan HTTPS
+      setFormData(prev => ({ ...prev, coverImage: fileData.secure_url }));
+      
+    } catch (err: any) {
+      console.error("Error uploading image:", err);
+      setError("Gagal mengunggah gambar. Pastikan konfigurasi Cloudinary Anda benar.");
+    } finally {
+      setUploadingImage(false);
+      // Reset input file agar bisa memilih file yang sama lagi jika terjadi error
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   if (loading) {
@@ -361,12 +422,40 @@ export default function BlogPostForm() {
                     <div className="space-y-8">
                       <div className="space-y-3">
                         <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Cover Image URL</label>
-                        <input 
-                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-white placeholder:text-gray-700" 
-                          value={formData.coverImage} 
-                          onChange={e => setFormData({...formData, coverImage: e.target.value})} 
-                          placeholder="https://i.imgur.com/... atau URL gambar lainnya"
-                        />
+                        
+                        <div className="flex gap-2">
+                          <input 
+                            className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-white placeholder:text-gray-700" 
+                            value={formData.coverImage} 
+                            onChange={e => setFormData({...formData, coverImage: e.target.value})} 
+                            placeholder="https://... atau URL gambar lainnya"
+                          />
+                          
+                          {/* Tombol Upload Cloudinary */}
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingImage}
+                            className="rounded-xl border-primary/50 bg-primary/10 hover:bg-primary/20 text-primary px-4"
+                          >
+                            {uploadingImage ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <>
+                                <UploadCloud className="w-5 h-5 mr-2" />
+                                Upload
+                              </>
+                            )}
+                          </Button>
+                        </div>
                         
                         {/* Live Image Preview (Glassmorphism) */}
                         {formData.coverImage && (
