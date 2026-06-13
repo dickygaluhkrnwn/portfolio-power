@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
-// Menggunakan relative path untuk menghindari error TS pada file CSS
+
 // @ts-ignore: CSS module type declarations may be missing in some environments
 import "./globals.css";
+
 import { cn } from "@/lib/utils";
 import { CommandMenuTrigger } from "@/components/ui/command-menu-trigger"; 
 import { CommandPalette } from "@/components/ui/command-palette";
@@ -25,20 +26,23 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 // --- SEO & PWA CONFIGURATION ---
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dickygaluh.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl), // Sangat penting untuk SEO dan resolusi URL relatif
   title: {
     default: "Dicky Galuh Kurniawan | Full Stack Developer",
     template: "%s | IKY Dev.",
   },
   description: "Portofolio resmi Dicky Galuh Kurniawan (Iky). Full Stack Developer yang fokus membangun aplikasi web modern, cepat, dan user-friendly.",
   keywords: ["Dicky Galuh Kurniawan", "Iky", "Full Stack Developer", "Next.js", "React", "Web Developer Indonesia", "Portfolio"],
-  authors: [{ name: "Dicky Galuh Kurniawan", url: "https://dickygaluh.com" }],
+  authors: [{ name: "Dicky Galuh Kurniawan", url: siteUrl }],
   creator: "Dicky Galuh Kurniawan",
-  manifest: "/manifest.json", // Link ke manifest
+  manifest: "/manifest.json", 
   openGraph: {
     type: "website",
     locale: "id_ID",
-    url: "https://dickygaluh.com",
+    url: siteUrl,
     title: "Dicky Galuh Kurniawan | Building Digital Masterpieces",
     description: "Lihat karya terbaik Iky dalam pengembangan web modern.",
     siteName: "IKY Dev.",
@@ -59,9 +63,21 @@ export const metadata: Metadata = {
     creator: "@iky_username",
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/logo-app.svg", 
+    icon: [
+      { url: '/icon.png', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: "/icon.png",
+    apple: [
+      { url: '/logo-app.svg' }
+    ], 
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/logo-app.svg',
+      },
+    ],
   },
   // Konfigurasi khusus Apple Device agar terasa seperti Native App
   appleWebApp: {
@@ -85,7 +101,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="id" className="scroll-smooth">
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased selection:bg-primary selection:text-white",
@@ -96,10 +112,8 @@ export default function RootLayout({
         <AuthProvider>
           <CommandPalette />
           
-          {/* Children sekarang otomatis dibungkus oleh app/template.tsx */}
           {children}
           
-          {/* Footer Wrapper akan mengecualikan halaman /admin */}
           <FooterWrapper />
           
           <Analytics />
