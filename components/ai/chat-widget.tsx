@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Send, User, Bot, Sparkles, Link2 } from "lucide-react"; 
+import { X, Send, User, Bot, Sparkles, Link2, Maximize2, Minimize2 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import Link from "next/link"; // Gunakan next/link untuk navigasi internal yang cepat
@@ -14,6 +14,7 @@ interface Message {
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -54,7 +55,14 @@ export function ChatWidget() {
 
   // --- FUNGSI FORMATTER CANGGIH (Markdown Links + JSX + Tables) ---
   const formatMessageContent = (text: string) => {
-    const lines = text.split('\n');
+    // Sanitasi HTML nyasar
+    let sanitizedText = text
+      .replace(/<br\s*\/?>/gi, '\n') // Ubah <br> jadi enter
+      .replace(/<a\s+href="([^"]+)">([^<]+)<\/a>/gi, '[$2]($1)') // Ubah <a> jadi format markdown [teks](link)
+      .replace(/<b>([^<]+)<\/b>/gi, '**$1**')
+      .replace(/<strong>([^<]+)<\/strong>/gi, '**$1**');
+
+    const lines = sanitizedText.split('\n');
     const elements: React.ReactNode[] = [];
     let currentList: React.ReactNode[] = [];
     let tableBuffer: string[] = [];
@@ -251,10 +259,13 @@ export function ChatWidget() {
       {/* Jendela Chat */}
       <div
         className={cn(
-          "fixed bottom-4 right-4 z-[60] w-[calc(100vw-2rem)] max-w-[400px] h-[550px] max-h-[85vh] flex flex-col rounded-[2rem] border border-white/10 bg-[#0a0a0a]/95 backdrop-blur-3xl shadow-[0_0_50px_-15px_rgba(0,0,0,0.8)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:right-6 sm:bottom-6 overflow-hidden",
+          "fixed z-[60] flex flex-col rounded-[2rem] border border-white/10 bg-[#0a0a0a]/95 backdrop-blur-3xl shadow-[0_0_50px_-15px_rgba(0,0,0,0.8)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden",
           isOpen
             ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
-            : "translate-y-10 opacity-0 scale-95 pointer-events-none"
+            : "translate-y-10 opacity-0 scale-95 pointer-events-none",
+          isExpanded 
+            ? "inset-4 sm:inset-10 md:inset-20 max-w-5xl mx-auto h-auto max-h-none" // Posisi tengah besar
+            : "bottom-4 right-4 w-[calc(100vw-2rem)] max-w-[400px] h-[550px] max-h-[85vh] sm:right-6 sm:bottom-6" // Posisi pojok kecil
         )}
       >
         {/* Glow effect di belakang header */}
@@ -280,12 +291,21 @@ export function ChatWidget() {
               </div>
             </div>
           </div>
-          <button
-            className="h-8 w-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-colors"
-            onClick={() => setIsOpen(false)}
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="h-8 w-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-colors hidden sm:flex"
+              onClick={() => setIsExpanded(!isExpanded)}
+              title={isExpanded ? "Perkecil" : "Perbesar"}
+            >
+              {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <button
+              className="h-8 w-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Area Pesan */}

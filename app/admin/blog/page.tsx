@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { AdminLayout } from "@/components/admin/admin-layout";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { 
@@ -22,7 +22,7 @@ export default function AdminBlog() {
   // --- ADVANCED FEATURES STATE ---
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "a-z">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "a-z">("a-z"); // Default sorting A-Z as requested
   const [viewMode, setViewMode] = useState<"list" | "grid">("list"); // Default desktop view
 
   const loadData = async () => {
@@ -82,15 +82,12 @@ export default function AdminBlog() {
   }), [posts]);
 
   return (
-    <AdminLayout 
-      title="Blog Management" 
-      description="Kelola artikel, tutorial, dan publikasi konten untuk audiens Anda."
-      actionButton={
-        <Button onClick={() => router.push("/admin/blog/new")} size="lg" className="w-full md:w-auto rounded-xl shadow-lg shadow-primary/20 bg-primary text-white hover:bg-primary/90 font-bold tracking-wide">
-          <Plus size={18} className="mr-2" /> Tulis Artikel Baru
-        </Button>
-      }
-    >
+    <>
+      <AdminPageHeader 
+        title="Blog Management" 
+        description="Kelola artikel, tutorial, dan publikasi konten untuk audiens Anda." 
+        actionButton={{ label: 'Tulis Artikel Baru', href: '/admin/blog/new' }}
+      />
       {/* --- QUICK INSIGHTS (STATS) --- */}
       {!loading && posts.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-8">
@@ -119,10 +116,27 @@ export default function AdminBlog() {
       )}
 
       {/* --- ADVANCED TOOLBAR --- */}
-      <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-2 flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shadow-lg">
+      <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-2 flex flex-col md:flex-row gap-4 items-center mb-6 shadow-lg">
         
-        {/* Left: Status Filter (Segmented Control) */}
-        <div className="flex w-full md:w-auto p-1 bg-white/5 rounded-xl border border-white/5">
+        {/* Search - Pindah ke Pojok Kiri */}
+        <div className="relative group w-full md:w-64 shrink-0">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Cari judul atau tag..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 rounded-xl focus:outline-none focus:border-primary/50 text-sm text-white placeholder:text-gray-600 transition-all shadow-inner h-10"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Status Filter (Segmented Control) */}
+        <div className="flex w-full md:w-auto p-1 bg-white/5 rounded-xl border border-white/5 md:ml-auto">
           {(["all", "published", "draft"] as const).map((status) => (
             <button
               key={status}
@@ -140,63 +154,44 @@ export default function AdminBlog() {
           ))}
         </div>
 
-        {/* Right: Search, Sort, View Mode & Refresh */}
-        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
-          {/* Search */}
-          <div className="relative group flex-1 md:w-64">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Cari judul atau tag..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 rounded-xl focus:outline-none focus:border-primary/50 text-sm text-white placeholder:text-gray-600 transition-all shadow-inner h-10"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
-                <X size={14} />
-              </button>
-            )}
+        {/* Right: Sort, View Mode & Refresh */}
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto [&::-webkit-scrollbar]:hidden shrink-0">
+          {/* Sort Dropdown */}
+          <div className="relative border border-white/10 rounded-xl bg-black/40 flex items-center h-10 px-3 hover:bg-white/5 transition-colors">
+            <ArrowDownUp size={14} className="text-gray-500 mr-2" />
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-sm text-gray-300 outline-none appearance-none cursor-pointer pr-4"
+            >
+              <option value="newest" className="bg-[#111]">Terbaru</option>
+              <option value="oldest" className="bg-[#111]">Terlama</option>
+              <option value="a-z" className="bg-[#111]">A - Z</option>
+            </select>
           </div>
 
-          <div className="flex gap-2">
-            {/* Sort Dropdown */}
-            <div className="relative border border-white/10 rounded-xl bg-black/40 flex items-center h-10 px-3 hover:bg-white/5 transition-colors">
-              <ArrowDownUp size={14} className="text-gray-500 mr-2" />
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent text-sm text-gray-300 outline-none appearance-none cursor-pointer pr-4"
-              >
-                <option value="newest" className="bg-[#111]">Terbaru</option>
-                <option value="oldest" className="bg-[#111]">Terlama</option>
-                <option value="a-z" className="bg-[#111]">A - Z</option>
-              </select>
-            </div>
-
-            {/* View Mode Toggles (Hidden on Mobile, always Grid on Mobile) */}
-            <div className="hidden md:flex items-center p-1 rounded-xl bg-black/40 border border-white/10 h-10">
-              <button 
-                onClick={() => setViewMode("list")}
-                className={cn("p-1.5 rounded-lg transition-all", viewMode === "list" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
-                title="Tampilan Tabel"
-              >
-                <ListIcon className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setViewMode("grid")}
-                className={cn("p-1.5 rounded-lg transition-all", viewMode === "grid" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
-                title="Tampilan Grid/Card"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Refresh Button */}
-            <Button variant="outline" onClick={loadData} size="icon" className="h-10 w-10 shrink-0 rounded-xl bg-black/40 border-white/10 hover:bg-white/5 hover:text-white transition-colors">
-              <RefreshCw size={16} className={cn(loading && "animate-spin")} />
-            </Button>
+          {/* View Mode Toggles (Hidden on Mobile, always Grid on Mobile) */}
+          <div className="hidden md:flex items-center p-1 rounded-xl bg-black/40 border border-white/10 h-10">
+            <button 
+              onClick={() => setViewMode("list")}
+              className={cn("p-1.5 rounded-lg transition-all", viewMode === "list" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
+              title="Tampilan Tabel"
+            >
+              <ListIcon className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode("grid")}
+              className={cn("p-1.5 rounded-lg transition-all", viewMode === "grid" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
+              title="Tampilan Grid/Card"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
           </div>
+
+          {/* Refresh Button */}
+          <Button variant="outline" onClick={loadData} size="icon" className="h-10 w-10 shrink-0 rounded-xl bg-black/40 border-white/10 hover:bg-white/5 hover:text-white transition-colors">
+            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
+          </Button>
         </div>
       </div>
 
@@ -315,7 +310,7 @@ export default function AdminBlog() {
           </motion.div>
         )}
       </div>
-    </AdminLayout>
+    </>
   );
 }
 

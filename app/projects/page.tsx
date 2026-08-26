@@ -1,291 +1,231 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; 
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
-import { ProjectCard } from "@/components/ui/project-card";
-import { Filter, Loader2, Search, ArrowDownUp, Sparkles, X } from "lucide-react"; 
-import { cn } from "@/lib/utils";
-
-// Import tipe data dan service
-import { Project } from "@/app/data/projects";
+import { ChevronLeft, ChevronRight, Loader2, Play } from "lucide-react"; 
+import { ProjectCard, Project as ProjectType } from "@/components/ui/project-card";
 import { getAllProjects } from "@/lib/projects-service";
-
-const categories = [
-  { id: "all", label: "All Works" },
-  { id: "fullstack", label: "Full Stack" },
-  { id: "frontend", label: "Frontend" },
-  { id: "backend", label: "Backend" },
-];
+import { cn } from "@/lib/utils";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]); 
+  const [projects, setProjects] = useState<ProjectType[]>([]); 
   const [loading, setLoading] = useState(true); 
-  
-  // --- FEATURES STATE ---
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "a-z" | "z-a">("newest");
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  // Fetch data saat halaman dimuat
   useEffect(() => {
     async function fetchData() {
       const data = await getAllProjects();
-      setProjects(data);
+      // Sort newest first
+      const sorted = data.sort((a, b) => Number(b.year || 0) - Number(a.year || 0));
+      setProjects(sorted);
       setLoading(false);
+      
+      // Initial active index (center of array if we want, or just 0)
+      setActiveIndex(0);
     }
     fetchData();
   }, []);
 
-  // --- LOGIC PENCARIAN, FILTER & URUTKAN ---
-  const processedProjects = useMemo(() => {
-    let result = projects.filter((project) => {
-      const matchesCategory = activeCategory === "all" || project.category === activeCategory;
-      
-      const searchLower = searchQuery.toLowerCase();
-      // Menggunakan (project as any) untuk menghindari error TS pada description & technologies
-      const matchesSearch = project.title.toLowerCase().includes(searchLower) || 
-                            ((project as any).description || "").toLowerCase().includes(searchLower) ||
-                            (((project as any).technologies || []).join(" ")).toLowerCase().includes(searchLower);
-      
-      return matchesCategory && matchesSearch;
-    });
-
-    // Logic Urutkan
-    if (sortBy === "a-z") {
-      result.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortBy === "z-a") {
-      result.sort((a, b) => b.title.localeCompare(a.title));
-    }
-    // Jika "newest", biarkan sesuai urutan dari database (asumsi data default = terbaru)
-
-    return result;
-  }, [projects, activeCategory, searchQuery, sortBy]);
-
-  // Handler pergantian urutan
-  const toggleSort = () => {
-    if (sortBy === "newest") setSortBy("a-z");
-    else if (sortBy === "a-z") setSortBy("z-a");
-    else setSortBy("newest");
+  const handleNext = () => {
+    if (activeIndex < projects.length - 1) setActiveIndex(prev => prev + 1);
   };
 
-  const handleProjectClick = (e: React.MouseEvent, id: number | string) => {
-    const target = e.target as HTMLElement;
-    // Mencegah navigasi ganda jika yang diklik adalah tombol di dalam card
-    if (target.closest("button") || target.closest("a")) {
-      return;
-    }
-    router.push(`/projects/${id}`);
+  const handlePrev = () => {
+    if (activeIndex > 0) setActiveIndex(prev => prev - 1);
   };
+
+  const handleCardClick = (idx: number, id: string | number) => {
+    if (idx === activeIndex) {
+      router.push(`/projects/${id}`);
+    } else {
+      setActiveIndex(idx);
+    }
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") handleNext();
+      if (e.key === "ArrowLeft") handlePrev();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeIndex, projects.length]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center">
+        <Navbar />
+        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+        <p className="text-gray-500 font-mono tracking-widest uppercase text-sm">Preparing 3D Showcase...</p>
+      </main>
+    );
+  }
+
+  // --- Dynamic Color Glow Logic ---
+  const activeProject = projects[activeIndex];
+  let glowColor = "rgba(255,255,255,0.05)";
+  if (activeProject) {
+    const type = (activeProject as any).projectType?.toLowerCase() || "software";
+    if (type === "software") glowColor = "rgba(99,102,241,0.4)"; // Indigo/Blue
+    else if (type === "marketing") glowColor = "rgba(16,185,129,0.4)"; // Emerald/Green
+    else if (type === "design") glowColor = "rgba(236,72,153,0.4)"; // Pink/Purple
+  }
 
   return (
-    <main className="min-h-screen bg-background text-foreground relative selection:bg-primary/30 selection:text-white pb-24">
+    <main className="min-h-screen bg-[#050505] text-white relative selection:bg-primary/30 overflow-hidden flex flex-col">
       <Navbar />
 
-      {/* --- BACKGROUND FX --- */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-clip">
-        <div className="absolute top-[5%] left-[5%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-primary/10 rounded-full blur-[100px] mix-blend-screen" />
-        <div className="absolute bottom-[20%] right-[5%] w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-accent/5 rounded-full blur-[120px] mix-blend-screen" />
-        {/* Grid pattern halus ala studio desain */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+      {/* --- AMBIENT BACKGROUND GLOW --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-clip transition-colors duration-1000">
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[150px] mix-blend-screen opacity-30 transition-all duration-1000 ease-in-out"
+          style={{ backgroundColor: glowColor.replace('0.4', '0.2') }} 
+        />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
       </div>
 
-      <div className="relative z-10 w-full pt-28 md:pt-40">
+      <div className="relative z-10 w-full pt-28 md:pt-36 px-4 flex flex-col flex-grow">
         
-        {/* --- 1. HERO SECTION (DASHBOARD BANNER STYLE) --- */}
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12 md:mb-20">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="w-full bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-6 sm:p-10 md:p-12 relative overflow-hidden shadow-2xl"
-          >
-            {/* Ambient Background & Texture */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/4" />
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center relative z-10">
-              
-              {/* Kiri: Title & Desc */}
-              <div className="lg:col-span-7 flex flex-col items-start">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm mb-6 w-fit">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                  </span>
-                  <span className="text-xs font-medium tracking-wide text-primary-foreground/80 uppercase">
-                    Portfolio // {new Date().getFullYear()}
-                  </span>
-                </div>
-
-                <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6 text-white">
-                  Creative <br className="hidden sm:block" />
-                  <span className="text-gradient-primary">Masterpieces.</span>
-                </h1>
-                
-                <p className="text-gray-400 text-base md:text-lg max-w-2xl font-light leading-relaxed">
-                  Koleksi eksklusif dari {loading ? "..." : projects.length} proyek terbaik. Mewujudkan ide kompleks menjadi eksekusi digital yang brilian dan estetis.
-                </p>
-              </div>
-
-              {/* Kanan: Latest Project Showcase */}
-              <div className="lg:col-span-5 relative w-full">
-                {loading ? (
-                  <div className="w-full h-[350px] bg-white/5 rounded-3xl animate-pulse border border-white/10" />
-                ) : projects.length > 0 ? (
-                  <div 
-                    className="relative group cursor-pointer touch-manipulation" 
-                    onClick={(e) => handleProjectClick(e, projects[0].id)}
-                  >
-                    {/* Badge Terbaru */}
-                    <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary text-white text-[10px] md:text-xs font-bold px-4 py-2 rounded-full shadow-xl shadow-primary/30 uppercase tracking-widest flex items-center gap-1.5 border border-primary/50">
-                      <Sparkles size={14} className="fill-white" /> Project Terbaru
-                    </div>
-
-                    {/* Card Container */}
-                    <div className="relative z-10 transition-transform duration-500 group-hover:-translate-y-2">
-                      <ProjectCard project={projects[0] as any} />
-                    </div>
-
-                    {/* Dekorasi Background Glow */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-primary/20 blur-[80px] rounded-full -z-10 group-hover:bg-primary/30 transition-colors duration-500" />
-                  </div>
-                ) : null}
-              </div>
-
-            </div>
-          </motion.div>
-        </div>
-
-        {/* --- 2. STUDIO CONTROL BAR (STATIC/NOT STICKY) --- */}
-        <div className="w-full border-y border-white/10 py-4 md:py-5 mb-12">
-          <div className="container max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            
-            {/* Category Links (Animated Underline) */}
-            <nav className="flex items-center gap-6 md:gap-8 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={cn(
-                    "relative text-sm md:text-base font-heading uppercase tracking-widest transition-colors whitespace-nowrap py-1",
-                    activeCategory === cat.id ? "text-white font-bold" : "text-gray-500 hover:text-gray-300"
-                  )}
-                >
-                  {cat.label}
-                  {activeCategory === cat.id && (
-                    <motion.div
-                      layoutId="active-nav-line"
-                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary"
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    />
-                  )}
-                </button>
-              ))}
-            </nav>
-
-            {/* Search & Sort Group */}
-            <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-              
-              {/* Minimalist Search */}
-              <div className="relative group flex-1 md:w-64">
-                <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Cari project..." 
-                  className="w-full bg-transparent border-b border-white/10 focus:border-primary pl-7 pr-8 py-2 text-sm text-white placeholder:text-gray-600 outline-none transition-colors rounded-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              {/* Minimalist Sort */}
-              <button 
-                onClick={toggleSort}
-                className="flex items-center gap-2 text-xs md:text-sm font-mono text-gray-400 hover:text-white uppercase tracking-widest shrink-0 transition-colors"
-              >
-                <ArrowDownUp className="w-4 h-4" />
-                {sortBy === "newest" ? "Terbaru" : sortBy === "a-z" ? "A - Z" : "Z - A"}
-              </button>
-
-            </div>
+        {/* --- HERO TEXT --- */}
+        <div className="text-center mb-10 md:mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-6 transition-colors duration-700" style={{ borderColor: glowColor.replace('0.4', '0.2') }}>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: glowColor.replace('rgba', 'rgb').replace(',0.4)', ')') }} />
+            <span className="text-xs font-mono text-gray-300 tracking-widest uppercase">
+              {activeProject ? (activeProject as any).projectType || 'Software' : 'Portfolio'} Showcase
+            </span>
           </div>
+          <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tighter uppercase text-white mb-4">
+            Interactive <span className="text-transparent bg-clip-text transition-colors duration-700" style={{ backgroundImage: `linear-gradient(to right, #fff, ${glowColor.replace('rgba', 'rgb').replace(',0.4)', ')')})` }}>Gallery</span>
+          </h1>
+          <p className="text-gray-400 max-w-xl mx-auto text-sm md:text-base font-light">
+             Gunakan panah kiri/kanan, atau klik kartu di belakang untuk memutar *carousel*. Klik kartu utama untuk melihat detail.
+          </p>
         </div>
 
-        {/* --- 3. PROJECT GRID --- */}
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-[450px] bg-white/5 rounded-3xl animate-pulse border border-white/5" />
-              ))}
-            </div>
-          ) : (
-            <>
-              <motion.div 
-                layout
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10"
+        {/* --- 3D COVERFLOW CAROUSEL --- */}
+        <div className="relative w-full max-w-7xl mx-auto flex-grow flex items-center justify-center perspective-[1200px] h-[500px] sm:h-[600px] md:h-[650px]">
+          
+          {projects.map((project, idx) => {
+            const offset = idx - activeIndex;
+            const absOffset = Math.abs(offset);
+            
+            // Calculate 3D transforms
+            const isActive = offset === 0;
+            const isVisible = absOffset <= 3; // Show up to 3 cards on each side
+            
+            if (!isVisible) return null;
+
+            // Positioning Math
+            const direction = offset > 0 ? 1 : -1;
+            const translateX = isActive ? 0 : offset * (typeof window !== 'undefined' && window.innerWidth < 768 ? 80 : 180);
+            const rotateY = isActive ? 0 : direction * -35; 
+            const scale = isActive ? 1 : 1 - (absOffset * 0.15);
+            const zIndex = 100 - absOffset;
+            const opacity = isActive ? 1 : 1 - (absOffset * 0.25);
+
+            // Shadow color based on category (only for active card)
+            const type = (project as any).projectType?.toLowerCase() || "software";
+            let cardGlow = "rgba(255,255,255,0)";
+            if (isActive) {
+               if (type === "software") cardGlow = "0 20px 50px -10px rgba(99,102,241,0.5)";
+               else if (type === "marketing") cardGlow = "0 20px 50px -10px rgba(16,185,129,0.5)";
+               else if (type === "design") cardGlow = "0 20px 50px -10px rgba(236,72,153,0.5)";
+            }
+
+            return (
+              <motion.div
+                key={project.id}
+                className={cn(
+                  "absolute top-0 w-[280px] sm:w-[350px] md:w-[400px] lg:w-[450px] h-[450px] sm:h-[500px] md:h-[550px]",
+                  isActive ? "cursor-pointer" : "cursor-pointer"
+                )}
+                style={{ zIndex }}
+                initial={false}
+                animate={{
+                  x: translateX,
+                  rotateY: rotateY,
+                  scale: scale,
+                  opacity: opacity,
+                  boxShadow: cardGlow,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 25,
+                  mass: 0.8
+                }}
+                onClick={() => handleCardClick(idx, project.id)}
               >
-                <AnimatePresence mode="popLayout">
-                  {processedProjects.map((project, idx) => (
-                    <motion.div
-                      layout
-                      key={project.id} 
-                      onClick={(e) => handleProjectClick(e, project.id)}
-                      className="block h-full cursor-pointer touch-manipulation group"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ 
-                        duration: 0.5, 
-                        delay: idx * 0.05, // Efek muncul berurutan (stagger)
-                        type: "spring", 
-                        stiffness: 100 
-                      }}
+                {/* Click overlay for non-active cards to prevent interacting with buttons inside ProjectCard */}
+                {!isActive && (
+                  <div className="absolute inset-0 z-50 rounded-3xl" />
+                )}
+                
+                {/* The actual Project Card */}
+                <div className="w-full h-full rounded-3xl overflow-hidden pointer-events-none sm:pointer-events-auto">
+                   <ProjectCard project={project} />
+                </div>
+                
+                {/* Active Card Indicator / Play Button */}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center gap-2 bg-white text-black px-6 py-2 rounded-full font-bold text-sm shadow-xl pointer-events-none"
                     >
-                      <div className="transition-transform duration-500 group-hover:-translate-y-2 h-full">
-                        <ProjectCard project={project as any} />
-                      </div>
+                      <Play size={14} className="fill-black" /> View Details
                     </motion.div>
-                  ))}
+                  )}
                 </AnimatePresence>
               </motion.div>
+            );
+          })}
+        </div>
 
-              {/* Empty State Editorial Style */}
-              {!loading && processedProjects.length === 0 && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center py-32 border-y border-white/10"
-                >
-                  <Filter size={40} className="mx-auto text-gray-700 mb-6" />
-                  <h3 className="text-2xl md:text-3xl font-heading font-bold text-white mb-4 uppercase tracking-wider">
-                    No Works Found
-                  </h3>
-                  <p className="text-gray-500 max-w-md mx-auto text-sm md:text-base">
-                    Tidak ada project yang cocok dengan filter atau kata kunci "{searchQuery}". Silakan sesuaikan pencarian Anda.
-                  </p>
-                  <button 
-                    onClick={() => {setSearchQuery(""); setActiveCategory("all"); setSortBy("newest");}}
-                    className="mt-8 text-primary font-mono text-sm uppercase tracking-widest hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto"
-                  >
-                    <X size={14} /> Clear Filters
-                  </button>
-                </motion.div>
-              )}
-            </>
-          )}
+        {/* --- NAVIGATION CONTROLS --- */}
+        <div className="flex items-center justify-center gap-8 pb-12 pt-6">
+          <button 
+            onClick={handlePrev}
+            disabled={activeIndex === 0}
+            className="w-12 h-12 rounded-full border border-white/20 bg-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-md"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          
+          {/* Progress Dots (Limited to show max 9 dots for UI sanity) */}
+          <div className="flex items-center gap-2 overflow-hidden px-2">
+            {projects.map((_, idx) => {
+               // Only show a sliding window of dots if too many projects
+               if (projects.length > 9 && Math.abs(idx - activeIndex) > 4) return null;
+               
+               return (
+                 <div 
+                   key={idx}
+                   onClick={() => setActiveIndex(idx)}
+                   className={cn(
+                     "rounded-full transition-all duration-300 cursor-pointer",
+                     idx === activeIndex 
+                       ? "w-8 h-2 bg-white" 
+                       : "w-2 h-2 bg-white/20 hover:bg-white/50"
+                   )}
+                 />
+               )
+            })}
+          </div>
+
+          <button 
+            onClick={handleNext}
+            disabled={activeIndex === projects.length - 1}
+            className="w-12 h-12 rounded-full border border-white/20 bg-white/5 flex items-center justify-center hover:bg-white/10 hover:border-white/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-md"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
 
       </div>

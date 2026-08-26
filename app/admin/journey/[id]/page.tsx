@@ -6,9 +6,11 @@ import { ProtectedRoute } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, Save, Loader2, Trash2, Briefcase, GraduationCap, 
-  Award, MonitorPlay, Clock, Building2, CheckCircle2, MapPin
+  Award, MonitorPlay, Clock, Building2, CheckCircle2, MapPin, Target
 } from "lucide-react";
 import { getJourneyItemById, saveJourneyItem, deleteJourneyItem, JourneyItem } from "@/lib/journey-service";
+import { getAllProjects } from "@/lib/projects-service";
+import { Project } from "@/app/data/projects";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,6 +20,7 @@ const initialData: Partial<JourneyItem> = {
   company: "",
   type: "work",
   desc: "",
+  relatedProjects: [],
 };
 
 export default function JourneyFormPage() {
@@ -27,26 +30,44 @@ export default function JourneyFormPage() {
   const isNew = id === "new";
 
   const [formData, setFormData] = useState<Partial<JourneyItem>>(initialData);
-  const [loading, setLoading] = useState(!isNew);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isNew && id) {
-      loadData(id);
-    }
+    loadInitialData();
   }, [id, isNew]);
 
-  const loadData = async (id: string) => {
+  const loadInitialData = async () => {
     try {
       setLoading(true);
-      const data = await getJourneyItemById(id);
-      if (data) setFormData(data);
-      else setError("Data Journey tidak ditemukan.");
+      
+      // Fetch all projects for the selector
+      const allProjects = await getAllProjects();
+      setProjects(allProjects);
+
+      if (!isNew && id) {
+        const data = await getJourneyItemById(id);
+        if (data) {
+          setFormData({ ...data, relatedProjects: data.relatedProjects || [] });
+        } else {
+          setError("Data Journey tidak ditemukan.");
+        }
+      }
     } catch (err) {
-      setError("Gagal memuat data journey.");
+      setError("Gagal memuat data.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProjectToggle = (projectId: string) => {
+    const current = formData.relatedProjects || [];
+    if (current.includes(projectId)) {
+      setFormData({ ...formData, relatedProjects: current.filter(id => id !== projectId) });
+    } else {
+      setFormData({ ...formData, relatedProjects: [...current, projectId] });
     }
   };
 
@@ -205,11 +226,11 @@ export default function JourneyFormPage() {
                         <div className="relative">
                           <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                           <input 
-                            required 
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-white text-sm placeholder:text-gray-700" 
-                            value={formData.company} 
-                            onChange={e => setFormData({...formData, company: e.target.value})} 
-                            placeholder="Contoh: PT. Teknologi Nusantara" 
+                           required 
+                           className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-white text-sm placeholder:text-gray-700" 
+                           value={formData.company} 
+                           onChange={e => setFormData({...formData, company: e.target.value})} 
+                           placeholder="Contoh: PT. Teknologi Nusantara" 
                           />
                         </div>
                       </div>
@@ -218,11 +239,11 @@ export default function JourneyFormPage() {
                         <div className="relative">
                           <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                           <input 
-                            required 
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-white font-mono text-sm placeholder:text-gray-700" 
-                            value={formData.year} 
-                            onChange={e => setFormData({...formData, year: e.target.value})} 
-                            placeholder="2021 - Present" 
+                           required 
+                           className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-white font-mono text-sm placeholder:text-gray-700" 
+                           value={formData.year} 
+                           onChange={e => setFormData({...formData, year: e.target.value})} 
+                           placeholder="2021 - Present" 
                           />
                         </div>
                       </div>
@@ -235,11 +256,55 @@ export default function JourneyFormPage() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Deskripsi & Pencapaian</label>
                     <textarea 
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-gray-300 min-h-[160px] resize-y placeholder:text-gray-700 leading-relaxed text-sm" 
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-gray-300 min-h-[120px] resize-y placeholder:text-gray-700 leading-relaxed text-sm" 
                       value={formData.desc} 
                       onChange={e => setFormData({...formData, desc: e.target.value})} 
                       placeholder="Jelaskan tanggung jawab utama, pencapaian penting, atau deskripsi singkat mengenai pengalaman ini..."
                     />
+                  </div>
+
+                  <div className="h-px bg-white/5" />
+
+                  {/* RELATED PROJECTS SELECTION */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Target size={18} className="text-primary"/>
+                      <label className="text-sm font-bold text-white">Highlight Case Studies / Project Terkait</label>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-4">Pilih project-project mana saja yang kamu kerjakan selama berada di posisi ini. Project yang dipilih akan muncul langsung di bawah perjalanan karir ini di halaman About.</p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                      {projects.map((project) => {
+                        const projIdStr = String(project.id);
+                        const isSelected = formData.relatedProjects?.includes(projIdStr);
+                        return (
+                          <div 
+                            key={projIdStr}
+                            onClick={() => handleProjectToggle(projIdStr)}
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all",
+                              isSelected 
+                                ? "bg-primary/10 border-primary text-primary" 
+                                : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20"
+                            )}
+                          >
+                            <div className={cn(
+                              "mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all",
+                              isSelected ? "bg-primary border-primary text-primary-foreground" : "border-gray-500"
+                            )}>
+                              {isSelected && <CheckCircle2 size={12} />}
+                            </div>
+                            <div>
+                              <div className={cn("text-sm font-bold leading-tight mb-1", isSelected ? "text-white" : "text-gray-300")}>{project.title}</div>
+                              <div className="text-[10px] font-mono opacity-70 truncate max-w-[150px] uppercase">{project.category}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {projects.length === 0 && (
+                       <p className="text-xs italic text-gray-500">Belum ada project di database.</p>
+                    )}
                   </div>
 
                   {/* Mobile Sticky Action Bar */}
@@ -275,7 +340,6 @@ export default function JourneyFormPage() {
                   {/* THE TIMELINE PREVIEW UI */}
                   <div className="relative pl-8 border-l-2 border-white/10 py-2 ml-4">
                     
-                    {/* The Node */}
                     <div className={cn(
                       "absolute -left-[17px] w-8 h-8 rounded-full bg-[#0a0a0a] border-2 flex items-center justify-center shadow-lg transition-all duration-300",
                       formData.type === "work" ? "border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]" :
@@ -287,7 +351,6 @@ export default function JourneyFormPage() {
                        <Award size={14} />}
                     </div>
 
-                    {/* The Content Card */}
                     <div className={cn(
                       "bg-[#0a0a0a] border rounded-2xl p-5 shadow-lg transition-all duration-300",
                       formData.type === "work" ? "border-blue-500/30" :
@@ -324,10 +387,26 @@ export default function JourneyFormPage() {
                       <p className="text-xs text-gray-500 leading-relaxed font-light">
                         {formData.desc || "Deskripsi pengalaman Anda akan muncul di sini. Tuliskan ringkasan yang menarik agar terlihat profesional."}
                       </p>
+
+                      {/* Attached Projects Preview */}
+                      {(formData.relatedProjects?.length || 0) > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Case Studies:</h4>
+                          {formData.relatedProjects?.map(projectId => {
+                            const p = projects.find(x => String(x.id) === String(projectId));
+                            if (!p) return null;
+                            return (
+                              <div key={p.id} className="bg-white/5 border border-white/10 rounded-lg p-2 flex items-center justify-between">
+                                <span className="text-xs text-gray-300 font-bold truncate">{p.title}</span>
+                                <ArrowLeft size={10} className="text-primary rotate-135 opacity-50" />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
 
                   </div>
-                  {/* End Timeline Preview */}
 
                 </div>
               </div>
@@ -340,7 +419,6 @@ export default function JourneyFormPage() {
   );
 }
 
-// --- SUB-COMPONENTS ---
 function TypeSelector({ icon, label, active, onClick, activeColor }: any) {
   return (
     <button

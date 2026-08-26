@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { AdminLayout } from "@/components/admin/admin-layout";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { 
@@ -22,8 +22,9 @@ export default function AdminServices() {
   // --- ADVANCED FEATURES STATE ---
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc">("newest");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid"); // Services look best in grid by default
+  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "draft">("all");
+  const [sortBy, setSortBy] = useState<"a-z" | "z-a" | "price-asc" | "price-desc">("a-z");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list"); 
 
   const loadData = async () => {
     setLoading(true);
@@ -68,9 +69,17 @@ export default function AdminServices() {
       result = result.filter(s => s.category === categoryFilter);
     }
 
-    // 3. Smart Sorting
+    // 3. Status Filter
+    if (statusFilter === "live") {
+      result = result.filter(s => !s.isDraft);
+    } else if (statusFilter === "draft") {
+      result = result.filter(s => s.isDraft);
+    }
+
+    // 4. Smart Sorting
     result.sort((a, b) => {
-      if (sortBy === "newest") return 0; // Assuming initial fetch is already chronological or by ID
+      if (sortBy === "a-z") return (a.title || "").localeCompare(b.title || "");
+      if (sortBy === "z-a") return (b.title || "").localeCompare(a.title || "");
       
       // Extract numbers from price strings (e.g., "Rp 5.000.000" -> 5000000)
       const getPriceValue = (priceStr: string) => {
@@ -85,7 +94,7 @@ export default function AdminServices() {
     });
 
     return result;
-  }, [services, searchQuery, categoryFilter, sortBy]);
+  }, [services, searchQuery, categoryFilter, statusFilter, sortBy]);
 
   // --- STATS ---
   const stats = useMemo(() => ({
@@ -95,15 +104,13 @@ export default function AdminServices() {
   }), [services]);
 
   return (
-    <AdminLayout 
-      title="Services Management" 
-      description="Kelola etalase paket layanan, harga, dan penawaran spesial Anda."
-      actionButton={
-        <Button onClick={() => router.push("/admin/services/new")} size="lg" className="w-full md:w-auto rounded-xl shadow-lg shadow-purple-500/20 bg-purple-600 text-white hover:bg-purple-500 font-bold tracking-wide border border-purple-500/50">
-          <Plus size={18} className="mr-2" /> Buat Layanan Baru
-        </Button>
-      }
-    >
+    <>
+      <AdminPageHeader 
+        title="Services Management" 
+        description="Kelola etalase paket layanan, harga, dan penawaran spesial Anda." 
+        actionButton={{ label: 'Buat Layanan Baru', href: '/admin/services/new' }}
+      />
+      
       {/* --- QUICK INSIGHTS (STATS) --- */}
       {!loading && services.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-8">
@@ -134,28 +141,16 @@ export default function AdminServices() {
       )}
 
       {/* --- ADVANCED TOOLBAR --- */}
-      <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-3 flex flex-col lg:flex-row gap-4 justify-between items-center mb-8 shadow-lg">
+      <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-4 flex flex-col xl:flex-row gap-4 justify-between items-center mb-8 shadow-lg">
         
-        {/* Left: Dynamic Category Filter */}
-        <div className="flex w-full lg:w-auto gap-2 overflow-x-auto pb-1 lg:pb-0 [&::-webkit-scrollbar]:hidden">
-          {categories.map(cat => (
-            <FilterPill 
-              key={cat}
-              active={categoryFilter === cat} 
-              onClick={() => setCategoryFilter(cat)} 
-              label={cat === "all" ? "Semua Layanan" : cat} 
-            />
-          ))}
-        </div>
-
-        {/* Right: Search, Sort, View Mode & Refresh */}
-        <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
+        {/* Left: Filters (Search, Category, Status) */}
+        <div className="flex flex-col md:flex-row w-full xl:w-auto gap-3">
           {/* Search */}
-          <div className="relative group flex-1 sm:w-64">
+          <div className="relative group w-full md:w-64">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
             <input 
               type="text" 
-              placeholder="Cari paket layanan..." 
+              placeholder="Cari layanan..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white/[0.02] border border-white/10 rounded-xl focus:outline-none focus:border-purple-500/50 text-sm text-white placeholder:text-gray-600 transition-all"
@@ -167,43 +162,73 @@ export default function AdminServices() {
             )}
           </div>
 
-          <div className="flex gap-2">
-            {/* Sort Dropdown */}
-            <div className="relative border border-white/10 rounded-xl bg-white/[0.02] flex items-center h-[42px] px-3 hover:bg-white/5 transition-colors">
-              <ArrowDownUp size={14} className="text-gray-500 mr-2" />
+          <div className="flex gap-3 w-full md:w-auto">
+            {/* Category Dropdown */}
+            <div className="relative border border-white/10 rounded-xl bg-white/[0.02] flex items-center h-[42px] px-3 hover:bg-white/5 transition-colors flex-1 md:flex-none">
               <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent text-sm text-gray-300 outline-none appearance-none cursor-pointer pr-4 font-medium"
+                value={categoryFilter} 
+                onChange={(e) => setCategoryFilter(e.target.value as any)}
+                className="bg-transparent text-sm text-gray-300 outline-none appearance-none cursor-pointer pr-4 font-medium capitalize w-full"
               >
-                <option value="newest" className="bg-[#111]">Default</option>
-                <option value="price-asc" className="bg-[#111]">Termurah</option>
-                <option value="price-desc" className="bg-[#111]">Termahal</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat} className="bg-[#111]">
+                    {cat === "all" ? "Semua Kategori" : cat}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* View Mode Toggle */}
-            <div className="hidden md:flex items-center p-1 rounded-xl bg-white/[0.02] border border-white/10">
-              <button 
-                onClick={() => setViewMode("grid")}
-                className={cn("p-1.5 rounded-lg transition-all", viewMode === "grid" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
-                title="Tampilan Kartu (Pricing)"
+            {/* Status Dropdown */}
+            <div className="relative border border-white/10 rounded-xl bg-white/[0.02] flex items-center h-[42px] px-3 hover:bg-white/5 transition-colors flex-1 md:flex-none">
+              <select 
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="bg-transparent text-sm text-gray-300 outline-none appearance-none cursor-pointer pr-4 font-medium w-full"
               >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setViewMode("list")}
-                className={cn("p-1.5 rounded-lg transition-all", viewMode === "list" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
-                title="Tampilan Tabel"
-              >
-                <ListIcon className="w-4 h-4" />
-              </button>
+                <option value="all" className="bg-[#111]">Semua Status</option>
+                <option value="live" className="bg-[#111]">🟢 Live (Publik)</option>
+                <option value="draft" className="bg-[#111]">⚪ Draft (Disembunyikan)</option>
+              </select>
             </div>
-
-            <Button variant="outline" onClick={loadData} size="icon" className="h-[42px] w-[42px] shrink-0 rounded-xl bg-white/[0.02] border-white/10 hover:bg-white/5 hover:text-white transition-colors">
-              <RefreshCw size={16} className={cn(loading && "animate-spin")} />
-            </Button>
           </div>
+        </div>
+
+        {/* Right: Sort, View Mode & Refresh */}
+        <div className="flex gap-3 w-full xl:w-auto justify-between xl:justify-end">
+          <div className="relative border border-white/10 rounded-xl bg-white/[0.02] flex items-center h-[42px] px-3 hover:bg-white/5 transition-colors">
+            <ArrowDownUp size={14} className="text-gray-500 mr-2" />
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-sm text-gray-300 outline-none appearance-none cursor-pointer pr-4 font-medium w-full"
+            >
+              <option value="a-z" className="bg-[#111]">A - Z</option>
+              <option value="z-a" className="bg-[#111]">Z - A</option>
+              <option value="price-asc" className="bg-[#111]">Termurah</option>
+              <option value="price-desc" className="bg-[#111]">Termahal</option>
+            </select>
+          </div>
+
+          <div className="hidden md:flex items-center p-1 rounded-xl bg-white/[0.02] border border-white/10">
+            <button 
+              onClick={() => setViewMode("grid")}
+              className={cn("p-1.5 rounded-lg transition-all", viewMode === "grid" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
+              title="Tampilan Kartu (Pricing)"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode("list")}
+              className={cn("p-1.5 rounded-lg transition-all", viewMode === "list" ? "bg-white/10 text-white shadow-sm" : "text-gray-600 hover:text-gray-300")}
+              title="Tampilan Tabel"
+            >
+              <ListIcon className="w-4 h-4" />
+            </button>
+          </div>
+
+          <Button variant="outline" onClick={loadData} size="icon" className="h-[42px] w-[42px] shrink-0 rounded-xl bg-white/[0.02] border-white/10 hover:bg-white/5 hover:text-white transition-colors">
+            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
+          </Button>
         </div>
       </div>
 
@@ -277,15 +302,35 @@ export default function AdminServices() {
                         </td>
                         
                         <td className="px-6 py-4">
-                          <div className="font-bold text-purple-400 mb-1">{service.price}</div>
-                          <div className="text-[10px] text-gray-500 font-mono tracking-wider">{service.duration}</div>
+                          {service.originalPrice && service.discountValue && (
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[10px] text-gray-500 line-through">{service.originalPrice}</span>
+                              <span className="text-[9px] font-bold text-red-400 bg-red-500/10 px-1 rounded border border-red-500/20">{service.discountValue} OFF</span>
+                            </div>
+                          )}
+                          <div className="font-bold text-purple-400 mb-1">
+                            {service.packages && service.packages.length > 0 && <span className="text-gray-400 text-xs font-normal mr-1">Mulai</span>}
+                            {service.price}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono tracking-wider">
+                            <span>{service.duration}</span>
+                            {service.packages && service.packages.length > 0 && (
+                              <span className="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">Multi-Tier</span>
+                            )}
+                          </div>
                         </td>
                         
                         <td className="px-6 py-4 text-center">
                           <div className="flex flex-col items-center gap-1.5">
-                            {service.isFlashSale && <span className="px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-400 border-red-500/20">Flash Sale</span>}
-                            {service.recommended && <span className="px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-widest bg-yellow-500/10 text-yellow-400 border-yellow-500/20">Recommended</span>}
-                            {!service.isFlashSale && !service.recommended && <span className="text-[10px] text-gray-600 font-mono">Regular</span>}
+                            {service.isDraft ? (
+                               <span className="px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-widest bg-gray-500/10 text-gray-400 border-gray-500/20">Draft</span>
+                            ) : (
+                               <span className="px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Live</span>
+                            )}
+                            <div className="flex gap-1 mt-1">
+                              {service.isFlashSale && <span className="px-1.5 py-0.5 rounded border text-[8px] font-bold uppercase tracking-widest bg-red-500/10 text-red-400 border-red-500/20"><Zap size={8} className="inline mr-0.5"/> Promo</span>}
+                              {service.recommended && <span className="px-1.5 py-0.5 rounded border text-[8px] font-bold uppercase tracking-widest bg-yellow-500/10 text-yellow-400 border-yellow-500/20"><Star size={8} className="inline mr-0.5"/> Star</span>}
+                            </div>
                           </div>
                         </td>
                         
@@ -307,27 +352,11 @@ export default function AdminServices() {
           </motion.div>
         )}
       </div>
-    </AdminLayout>
+    </>
   );
 }
 
 // --- LOCAL UI COMPONENTS ---
-
-function FilterPill({ active, onClick, label }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "px-4 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap border outline-none capitalize",
-        active 
-          ? "text-white border-purple-500/50 bg-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.2)]" 
-          : "bg-transparent border-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]"
-      )}
-    >
-      {label}
-    </button>
-  );
-}
 
 // --- PRICING CARD COMPONENT ---
 function PricingCard({ service, onEdit, onDelete }: { service: ServicePackage, onEdit: () => void, onDelete: () => void }) {
@@ -351,9 +380,19 @@ function PricingCard({ service, onEdit, onDelete }: { service: ServicePackage, o
 
       {/* Header Badges */}
       <div className="flex justify-between items-start mb-6">
-        <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 uppercase tracking-widest">
-          {service.category}
-        </span>
+        <div className="flex gap-2">
+          <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-md border border-white/10 uppercase tracking-widest">
+            {service.category}
+          </span>
+          {service.packages && service.packages.length > 0 && (
+            <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20 uppercase tracking-widest">Multi-Tier</span>
+          )}
+          {service.isDraft ? (
+            <span className="text-[10px] font-bold text-gray-400 bg-gray-500/10 px-2.5 py-1 rounded-md border border-gray-500/20 uppercase tracking-widest">Draft</span>
+          ) : (
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 uppercase tracking-widest">Live</span>
+          )}
+        </div>
         <div className="flex gap-2">
           {service.isFlashSale && (
             <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/30">
@@ -371,9 +410,20 @@ function PricingCard({ service, onEdit, onDelete }: { service: ServicePackage, o
       {/* Title & Price */}
       <h3 className="text-xl font-bold text-white mb-2 leading-tight relative z-10">{service.title}</h3>
       <div className="mb-2 relative z-10">
-        <span className={cn("text-3xl font-heading font-bold tracking-tight", service.isFlashSale ? "text-red-400" : "text-purple-400")}>
-          {service.price}
-        </span>
+        {service.originalPrice && service.discountValue && (
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm text-gray-500 line-through decoration-red-500/50">{service.originalPrice}</span>
+            <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 uppercase tracking-widest">{service.discountValue} OFF</span>
+          </div>
+        )}
+        <div className="flex items-end gap-1">
+          {service.packages && service.packages.length > 0 && (
+            <span className="text-sm text-gray-400 font-medium mb-1.5">Mulai</span>
+          )}
+          <span className={cn("text-3xl font-heading font-bold tracking-tight", (service.isFlashSale || service.originalPrice) ? "text-red-400" : "text-purple-400")}>
+            {service.price}
+          </span>
+        </div>
       </div>
       <p className="text-xs text-gray-500 font-mono mb-6 pb-6 border-b border-white/10">{service.duration}</p>
 

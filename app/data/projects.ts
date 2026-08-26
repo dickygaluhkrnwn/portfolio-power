@@ -3,14 +3,25 @@ export interface Project {
   title: string;
   subtitle?: string;
   desc: string;
-  category: "fullstack" | "frontend" | "backend" | "mobile" | "uiux";
-  techStack: { name: string; color: string }[];
+  
+  // Base fields
+  projectType?: "software" | "marketing" | "design" | "other"; // Dynamic layouts
+  category: "fullstack" | "frontend" | "backend" | "mobile" | "uiux" | "marketing" | "design";
+  techStack: { skillId?: string; name: string; color?: string; icon?: string }[];
   image: string; 
-  demoLink?: string;
-  repoLink?: string;
   featured?: boolean;
   
-  // Detail khusus
+  // Software specific
+  demoLink?: string;
+  repoLink?: string;
+  
+  // Marketing specific
+  metrics?: { label: string; value: string }[];
+  
+  // Design/Creative specific
+  gallery?: string[];
+  
+  // Details
   challenge?: string;
   solution?: string;
   features?: string[];

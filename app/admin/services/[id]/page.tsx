@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, Save, Loader2, Trash2, Plus, X, Image as ImageIcon, 
   Zap, Percent, Calculator, Clock, CheckCircle2, Star,
-  LayoutGrid, FileText, MonitorPlay, Tag, ShoppingCart, Users, ShieldCheck
+  LayoutGrid, FileText, MonitorPlay, ShoppingCart, Info, EyeOff, Eye, Tag
 } from "lucide-react";
 import { getServiceById, saveService, deleteService } from "@/lib/services-service";
-import { ServicePackage } from "@/app/data/services";
+import { ServicePackage, PricingTier } from "@/app/data/services";
 import TiptapEditor from "@/components/ui/tiptap-editor";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,11 +35,28 @@ const initialData: ExtendedServicePackage = {
   sales: 0,
   isFlashSale: false,
   originalPrice: "",
-  discountValue: 0,
+  discountValue: "",
   flashSaleEndDate: "",
+  isDraft: false,
+  tags: [],
+  packages: [],
 };
 
 type TabType = "general" | "pricing" | "content";
+
+// --- Info Tooltip Component ---
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <div className="group relative inline-flex items-center justify-center ml-2 cursor-help">
+      <Info size={14} className="text-gray-500 hover:text-purple-400 transition-colors" />
+      <div className="absolute bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-black/90 text-xs text-white rounded-lg shadow-xl border border-white/10 z-50 pointer-events-none whitespace-normal">
+        {text}
+        {/* Triangle pointer */}
+        <div className="absolute top-full left-4 w-2 h-2 bg-black/90 border-b border-r border-white/10 transform rotate-45 -translate-y-1" />
+      </div>
+    </div>
+  );
+}
 
 export default function ServiceFormPage() {
   const router = useRouter();
@@ -49,12 +66,19 @@ export default function ServiceFormPage() {
 
   const [formData, setFormData] = useState<ExtendedServicePackage>(initialData);
   const [featureInput, setFeatureInput] = useState("");
-  const [isDiscountActive, setIsDiscountActive] = useState(false); 
+  const [tagInput, setTagInput] = useState("");
+  const [isDiscountActive, setIsDiscountActive] = useState(false);
+  const [discountType, setDiscountType] = useState<"percent" | "nominal">("percent");
+  const [discountInput, setDiscountInput] = useState(""); 
+  const [usePackages, setUsePackages] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<TabType>("general");
+
+  // Package Features Input State (Index -> Input string)
+  const [pkgFeatureInputs, setPkgFeatureInputs] = useState<{[key: number]: string}>({});
 
   useEffect(() => {
     if (!isNew && id) {
@@ -75,6 +99,9 @@ export default function ServiceFormPage() {
         if (mergedData.originalPrice && mergedData.originalPrice !== "") {
           setIsDiscountActive(true);
         }
+        if (mergedData.packages && mergedData.packages.length > 0) {
+          setUsePackages(true);
+        }
       } else {
         setError("Layanan tidak ditemukan.");
       }
@@ -85,6 +112,20 @@ export default function ServiceFormPage() {
       setLoading(false);
     }
   };
+
+  // Initialize Packages if toggled ON and empty
+  useEffect(() => {
+    if (usePackages && (!formData.packages || formData.packages.length === 0)) {
+      setFormData(prev => ({
+        ...prev,
+        packages: [
+          { name: "Basic", description: "", price: "", duration: "", revisions: "", features: [] },
+          { name: "Standard", description: "", price: "", duration: "", revisions: "", features: [] },
+          { name: "Premium", description: "", price: "", duration: "", revisions: "", features: [] },
+        ]
+      }));
+    }
+  }, [usePackages, formData.packages]);
 
   // --- HELPER: FORMAT CURRENCY ---
   const formatRupiah = (value: string) => {
@@ -108,7 +149,77 @@ export default function ServiceFormPage() {
     return parseInt(priceString.replace(/[^0-9]/g, "")) || 0;
   };
 
-  // --- AUTO CALCULATION LOGIC ---
+  const handleCalculatePromo = () => {
+    const isMulti = usePackages && formData.packages && formData.packages.length > 0;
+    const baseStr = isMulti ? formData.packages![0].price : formData.price;
+    const basePrice = parseNumber(baseStr || "0");
+    
+    if (basePrice <= 0) {
+      alert("Harga Jual atau Harga Paket Basic belum diisi!");
+      return;
+    }
+
+    let finalBasePrice = basePrice;
+    let label = "";
+
+    if (discountType === "percent") {
+      const perc = parseFloat(discountInput) || 0;
+      finalBasePrice = basePrice - (basePrice * perc / 100);
+      label = `${perc}%`;
+    } else {
+      const nom = parseNumber(discountInput);
+      finalBasePrice = basePrice - nom;
+      if (nom >= 1000000) {
+        label = `Rp${nom/1000000}JT`;
+      } else if (nom >= 1000) {
+        label = `Rp${nom/1000}RB`;
+      } else {
+        label = `Rp${nom}`;
+      }
+    }
+    
+    if (finalBasePrice < 0) finalBasePrice = 0;
+    
+    setFormData(prev => {
+      const next = { ...prev };
+      
+      next.originalPrice = formatRupiah(basePrice.toString());
+      next.discountValue = label;
+      
+      if (isMulti && next.packages) {
+         next.packages = next.packages.map(pkg => {
+            const pPrice = parseNumber(pkg.price);
+            let finalP = pPrice;
+            if (discountType === "percent") {
+               const perc = parseFloat(discountInput) || 0;
+               finalP = pPrice - (pPrice * perc / 100);
+            } else {
+               const nom = parseNumber(discountInput);
+               finalP = pPrice - nom;
+            }
+            if (finalP < 0) finalP = 0;
+            return { ...pkg, price: formatRupiah(finalP.toString()) };
+         });
+         next.price = next.packages[0].price;
+      } else {
+         next.price = formatRupiah(finalBasePrice.toString());
+      }
+      
+      return next;
+    });
+  };
+
+  const handleClearPromo = () => {
+    setFormData(prev => ({
+      ...prev,
+      originalPrice: "",
+      discountValue: "",
+      isFlashSale: false,
+      flashSaleEndDate: ""
+    }));
+    alert("Promo dihapus. Silakan kembalikan Harga Jual/Paket Anda ke harga normal secara manual jika diperlukan.");
+  };
+
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
     const formatted = formatRupiah(rawVal);
@@ -116,48 +227,92 @@ export default function ServiceFormPage() {
     setFormData(prev => {
       const newData = { ...prev, price: formatted };
       if (isDiscountActive && prev.originalPrice) {
-        const final = parseNumber(formatted);
-        const original = parseNumber(prev.originalPrice);
-        if (original > 0) {
-          const disc = Math.round(((original - final) / original) * 100);
-          newData.discountValue = disc > 0 ? disc : 0;
-        }
+         // Auto calc discount if single price mode
       }
       return newData;
     });
   };
 
-  const handleOriginalPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawVal = e.target.value;
-    const formatted = formatRupiah(rawVal);
-
+  // Generic handler for packages
+  const handlePackageChange = (idx: number, field: keyof PricingTier, value: string) => {
     setFormData(prev => {
-      const newData = { ...prev, originalPrice: formatted };
-      if (prev.price) {
-        const final = parseNumber(prev.price);
-        const original = parseNumber(formatted);
-        if (original > 0) {
-          const disc = Math.round(((original - final) / original) * 100);
-          newData.discountValue = disc > 0 ? disc : 0;
+      const newPkgs = [...(prev.packages || [])];
+      if (newPkgs[idx]) {
+        if (field === "price") {
+           newPkgs[idx] = { ...newPkgs[idx], [field]: formatRupiah(value) };
+        } else {
+           newPkgs[idx] = { ...newPkgs[idx], [field]: value };
         }
       }
-      return newData;
+      // If updating Basic price, optionally sync it with the main display price
+      let newMainPrice = prev.price;
+      if (idx === 0 && field === "price") {
+         newMainPrice = formatRupiah(value);
+      }
+      return { ...prev, packages: newPkgs, price: newMainPrice };
     });
   };
 
-  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const discVal = parseInt(e.target.value) || 0;
-    
+  const addPkgFeature = (idx: number) => {
+    const text = pkgFeatureInputs[idx]?.trim();
+    if (text) {
+      setFormData(prev => {
+        const newPkgs = [...(prev.packages || [])];
+        if (newPkgs[idx]) {
+          newPkgs[idx].features = [...(newPkgs[idx].features || []), text];
+        }
+        return { ...prev, packages: newPkgs };
+      });
+      setPkgFeatureInputs(prev => ({ ...prev, [idx]: "" }));
+    }
+  };
+
+  const removePkgFeature = (pkgIdx: number, featIdx: number) => {
     setFormData(prev => {
-      const newData = { ...prev, discountValue: discVal };
-      if (prev.originalPrice) {
-        const original = parseNumber(prev.originalPrice);
-        const cut = (original * discVal) / 100;
-        const final = original - cut;
-        newData.price = formatRupiah(final.toString());
+      const newPkgs = [...(prev.packages || [])];
+      if (newPkgs[pkgIdx]) {
+        newPkgs[pkgIdx].features = newPkgs[pkgIdx].features.filter((_, i) => i !== featIdx);
       }
-      return newData;
+      return { ...prev, packages: newPkgs };
     });
+  };
+
+  // Tags logic
+  const addTag = (e?: React.KeyboardEvent) => {
+    if (e) e.preventDefault();
+    if (tagInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...(prev.tags || []), tagInput.trim()]
+      }));
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags?.filter((_, i) => i !== idx)
+    }));
+  };
+
+  // General Feature List Helpers
+  const addFeature = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
+    if (featureInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        features: [...(prev.features || []), featureInput.trim()]
+      }));
+      setFeatureInput("");
+    }
+  };
+
+  const removeFeature = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features?.filter((_, i) => i !== idx)
+    }));
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -166,16 +321,11 @@ export default function ServiceFormPage() {
     setError(null);
     
     const dataToSave = { ...formData };
-    if (!isDiscountActive) {
-      dataToSave.originalPrice = "";
-      dataToSave.discountValue = 0;
+    if (!usePackages) {
+       dataToSave.packages = []; // Clear packages if disabled
     }
-    if (!dataToSave.isFlashSale) {
-      dataToSave.flashSaleEndDate = "";
-    }
-    
-    if (!dataToSave.title || !dataToSave.price) {
-      setError("Judul dan Harga wajib diisi.");
+    if (!dataToSave.title) {
+      setError("Judul wajib diisi.");
       setSaving(false);
       return;
     }
@@ -205,44 +355,7 @@ export default function ServiceFormPage() {
     }
   };
 
-  // Feature List Helpers
-  const addFeature = (e?: React.MouseEvent | React.KeyboardEvent) => {
-    if (e) e.preventDefault();
-    if (featureInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        features: [...(prev.features || []), featureInput.trim()]
-      }));
-      setFeatureInput("");
-    }
-  };
-
-  const removeFeature = (idx: number) => {
-    setFormData(prev => ({
-      ...prev,
-      features: prev.features?.filter((_, i) => i !== idx)
-    }));
-  };
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#050505]"><Loader2 className="animate-spin text-primary w-10 h-10" /></div>;
-  }
-
-  if (error && !formData.title && !isNew) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-[#050505] text-foreground flex flex-col items-center justify-center p-4">
-          <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center max-w-md shadow-2xl">
-            <h3 className="text-2xl font-bold text-red-400 mb-2">Terjadi Kesalahan</h3>
-            <p className="text-gray-400 mb-8">{error}</p>
-            <Button onClick={() => router.push("/admin/services")} className="rounded-full bg-red-500 hover:bg-red-600 text-white">
-              Kembali ke Layanan
-            </Button>
-          </div>
-        </div>
-      </ProtectedRoute>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#050505]"><Loader2 className="animate-spin text-primary w-10 h-10" /></div>;
 
   return (
     <ProtectedRoute>
@@ -256,11 +369,11 @@ export default function ServiceFormPage() {
         {/* --- STICKY HEADER --- */}
         <header className="border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
               <Button variant="outline" size="icon" onClick={() => router.push("/admin/services")} className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:text-white text-gray-400">
                 <ArrowLeft size={18} />
               </Button>
-              <div>
+              <div className="flex-1">
                 <h1 className="font-heading text-lg md:text-xl font-bold text-white truncate max-w-[200px] md:max-w-md">
                   {isNew ? "Layanan Baru" : formData.title || "Untitled Service"}
                 </h1>
@@ -270,19 +383,25 @@ export default function ServiceFormPage() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              {!isNew && (
-                <Button variant="outline" size="icon" onClick={handleDelete} disabled={saving} className="rounded-xl bg-transparent border-white/10 text-gray-400 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 hidden md:flex">
-                  <Trash2 size={16} />
-                </Button>
-              )}
-              <span className="hidden md:flex text-xs font-mono text-gray-500 mr-2 items-center gap-1.5">
-                <div className={cn("w-2 h-2 rounded-full", formData.title && formData.price ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]")} />
-                {formData.title && formData.price ? "Ready to Save" : "Pending Fields"}
-              </span>
-              <Button onClick={() => handleSubmit()} disabled={saving} className="w-full sm:w-auto rounded-xl shadow-lg shadow-purple-500/20 bg-purple-600 text-white hover:bg-purple-500 font-bold tracking-wide border border-purple-500/50">
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              
+              {/* DRAFT TOGGLE */}
+              <button 
+                onClick={() => setFormData(prev => ({...prev, isDraft: !prev.isDraft}))}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-all",
+                  formData.isDraft 
+                    ? "bg-gray-500/20 text-gray-400 border-gray-500/50 hover:bg-gray-500/30" 
+                    : "bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30"
+                )}
+              >
+                {formData.isDraft ? <EyeOff size={14} /> : <Eye size={14} />}
+                {formData.isDraft ? "Draft" : "Live"}
+              </button>
+
+              <Button onClick={() => handleSubmit()} disabled={saving} className="rounded-xl shadow-lg shadow-purple-500/20 bg-purple-600 text-white hover:bg-purple-500 font-bold tracking-wide border border-purple-500/50">
                 {saving ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : <Save className="mr-2 h-4 w-4"/>}
-                {isNew ? "Terbitkan Layanan" : "Simpan Perubahan"}
+                {isNew ? "Terbitkan" : "Simpan"}
               </Button>
             </div>
           </div>
@@ -322,7 +441,9 @@ export default function ServiceFormPage() {
                   {activeTab === "general" && (
                     <div className="space-y-8">
                       <div className="space-y-3">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Thumbnail Latar Belakang (Imgur)</label>
+                        <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                          Thumbnail Latar Belakang <InfoTooltip text="Link gambar cover layanan Anda. Disarankan menggunakan imgur.com untuk hosting gambar." />
+                        </label>
                         <input 
                           className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white placeholder:text-gray-700 text-sm" 
                           placeholder="https://i.imgur.com/... (Disarankan Abstract/Gradient Tech)"
@@ -333,18 +454,22 @@ export default function ServiceFormPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/10">
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Nama Paket Layanan *</label>
+                          <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                            Judul Pekerjaan (Jasa) * <InfoTooltip text="Tulis judul yang menarik, misal: 'Jasa Pembuatan Aplikasi Mobile + AI'." />
+                          </label>
                           <input 
                             required 
                             className="w-full px-4 py-3 md:py-4 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white font-bold text-xl md:text-3xl placeholder:text-gray-700" 
-                            placeholder="Contoh: Landing Page Eksekutif"
+                            placeholder="Contoh: Pembuatan Aplikasi Mobile Premium"
                             value={formData.title || ""} 
                             onChange={e => setFormData({...formData, title: e.target.value})} 
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Kategori</label>
+                          <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                            Kategori <InfoTooltip text="Kategori ini menentukan dimana jasa akan difilter di halaman utama." />
+                          </label>
                           <select 
                             className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white appearance-none cursor-pointer" 
                             value={formData.category} 
@@ -353,27 +478,44 @@ export default function ServiceFormPage() {
                             <option value="frontend" className="bg-[#111]">Frontend Development</option>
                             <option value="backend" className="bg-[#111]">Backend & API</option>
                             <option value="fullstack" className="bg-[#111]">Fullstack App</option>
+                            <option value="mobile" className="bg-[#111]">Mobile App</option>
+                            <option value="design" className="bg-[#111]">UI/UX Design</option>
+                            <option value="marketing" className="bg-[#111]">Marketing Ads</option>
+                            <option value="seo" className="bg-[#111]">SEO Optimization</option>
+                            <option value="consulting" className="bg-[#111]">IT Consulting</option>
                             <option value="maintenance" className="bg-[#111]">Maintenance & Support</option>
-                            <option value="uiux" className="bg-[#111]">UI/UX Design</option>
                           </select>
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Estimasi Pengerjaan *</label>
-                          <div className="relative">
-                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                          <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                            Tags / Keywords <InfoTooltip text="Kata kunci untuk pencarian internal/SEO. Ketik lalu Enter." />
+                          </label>
+                          <div className="relative flex items-center">
+                            <Tag className="absolute left-4 w-4 h-4 text-gray-500" />
                             <input 
-                              required 
                               className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white placeholder:text-gray-700 text-sm" 
-                              placeholder="Contoh: 2-3 Hari Kerja"
-                              value={formData.duration || ""} 
-                              onChange={e => setFormData({...formData, duration: e.target.value})} 
+                              placeholder="Ketik tag, tekan Enter"
+                              value={tagInput} 
+                              onChange={e => setTagInput(e.target.value)} 
+                              onKeyDown={e => e.key === "Enter" && addTag(e)}
                             />
                           </div>
+                          {formData.tags && formData.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {formData.tags.map((tag, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-300 flex items-center gap-1">
+                                  {tag} <X size={12} className="cursor-pointer hover:text-red-400" onClick={() => removeTag(idx)} />
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Deskripsi Singkat (Short Desc)</label>
+                          <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                            Deskripsi Singkat <InfoTooltip text="1-2 kalimat pemikat yang muncul di kartu katalog. Buat semenarik mungkin." />
+                          </label>
                           <textarea 
                             required 
                             className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-gray-300 min-h-[100px] resize-none placeholder:text-gray-700 leading-relaxed text-sm" 
@@ -390,120 +532,230 @@ export default function ServiceFormPage() {
                   {activeTab === "pricing" && (
                     <div className="space-y-8">
                       
-                      {/* Base Price */}
-                      <div className="p-6 md:p-8 bg-purple-500/5 border border-purple-500/20 rounded-2xl relative overflow-hidden">
-                        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-purple-500/10 blur-[40px] rounded-full pointer-events-none" />
-                        <div className="space-y-3 relative z-10">
-                          <label className="text-xs font-bold uppercase tracking-wider text-purple-300 ml-1">Harga Jual / Harga Akhir (IDR) *</label>
-                          <input 
-                            required 
-                            className="w-full px-5 py-4 rounded-xl bg-black/40 border border-purple-500/30 focus:border-purple-400 outline-none transition-colors text-white font-mono font-bold text-2xl md:text-3xl placeholder:text-gray-700" 
-                            placeholder="Rp 0"
-                            value={formData.price || ""} 
-                            onChange={handlePriceChange} 
-                          />
-                          <p className="text-xs text-gray-400">Harga ini adalah nominal final yang akan ditampilkan utama ke klien.</p>
+                      {/* TOGGLE PACKAGE MODE */}
+                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                         <div>
+                           <h4 className="font-bold text-white flex items-center gap-2">Mode Paket Berjenjang (Tiers) <InfoTooltip text="Aktifkan ini jika jasa Anda punya 3 paket harga (Basic, Standard, Premium) ala Fastwork/Fiverr." /></h4>
+                           <p className="text-xs text-gray-400">Gunakan ini jika Anda menjual paket Basic, Standard, Premium.</p>
+                         </div>
+                         <div 
+                          className={cn(
+                            "relative flex items-center w-12 h-6 rounded-full p-1 cursor-pointer transition-colors border shrink-0",
+                            usePackages ? "bg-purple-500/20 border-purple-500/50" : "bg-white/5 border-white/10"
+                          )}
+                          onClick={() => setUsePackages(!usePackages)}
+                        >
+                          <div className={cn(
+                            "absolute w-4 h-4 rounded-full transition-transform duration-300 shadow-md",
+                            usePackages ? "translate-x-6 bg-purple-400" : "translate-x-0 bg-gray-500"
+                          )} />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        {/* 1. Toggle Diskon */}
-                        <div className={cn(
-                          "p-5 rounded-2xl border transition-all duration-300",
-                          isDiscountActive ? "bg-orange-500/5 border-orange-500/30 shadow-[0_0_20px_-5px_rgba(249,115,22,0.15)]" : "bg-white/[0.02] border-white/5"
-                        )}>
-                          <div className="flex items-center gap-3 mb-6">
-                            <input 
-                              type="checkbox" id="activeDiscount" 
-                              className="w-5 h-5 rounded bg-black/20 border-white/10 text-orange-500 focus:ring-orange-500"
-                              checked={isDiscountActive}
-                              onChange={e => setIsDiscountActive(e.target.checked)}
-                            />
-                            <label htmlFor="activeDiscount" className={cn("text-sm font-bold cursor-pointer select-none flex items-center gap-2", isDiscountActive ? "text-orange-400" : "text-gray-400")}>
-                              <Percent size={16} /> Mode Harga Coret
+                      {/* --- MULTI-TIER FORM --- */}
+                      {usePackages ? (
+                        <div className="space-y-6">
+                           <p className="text-sm text-gray-400 border-l-2 border-purple-500 pl-3">Mode Multi-Tier Aktif. Harga "Mulai Dari" akan diambil otomatis dari Paket Basic.</p>
+                           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                             {formData.packages?.map((pkg, idx) => (
+                               <div key={idx} className="bg-black/30 border border-white/10 rounded-3xl p-5 shadow-lg flex flex-col gap-4">
+                                  <div className="border-b border-white/10 pb-3">
+                                    <span className={cn(
+                                      "px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md",
+                                      idx === 0 ? "bg-white/10 text-white" : idx === 1 ? "bg-purple-500/20 text-purple-300" : "bg-yellow-500/20 text-yellow-300"
+                                    )}>Paket {pkg.name}</span>
+                                  </div>
+                                  <div className="space-y-2">
+                                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Harga (IDR)</label>
+                                     <input 
+                                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500 text-white font-mono text-lg" 
+                                       value={pkg.price} onChange={e => handlePackageChange(idx, 'price', e.target.value)}
+                                     />
+                                  </div>
+                                  <div className="space-y-2">
+                                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Deskripsi Paket</label>
+                                     <textarea 
+                                       className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-purple-500 text-gray-300 text-xs min-h-[80px]" 
+                                       value={pkg.description} onChange={e => handlePackageChange(idx, 'description', e.target.value)}
+                                     />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Durasi</label>
+                                      <input className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs" placeholder="Misal: 5 Hari" value={pkg.duration} onChange={e => handlePackageChange(idx, 'duration', e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Revisi</label>
+                                      <input className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs" placeholder="Misal: 2 Kali" value={pkg.revisions} onChange={e => handlePackageChange(idx, 'revisions', e.target.value)} />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2 mt-2 border-t border-white/5 pt-3">
+                                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Fitur Spesifik Paket</label>
+                                      <div className="flex gap-2">
+                                        <input 
+                                          className="flex-1 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-xs" 
+                                          placeholder="Tambah fitur..."
+                                          value={pkgFeatureInputs[idx] || ""}
+                                          onChange={e => setPkgFeatureInputs(prev => ({...prev, [idx]: e.target.value}))}
+                                          onKeyDown={e => e.key === "Enter" && addPkgFeature(idx)}
+                                        />
+                                        <button onClick={() => addPkgFeature(idx)} className="px-2 bg-white/10 hover:bg-white/20 rounded-lg text-white"><Plus size={14}/></button>
+                                      </div>
+                                      <ul className="space-y-1 mt-2">
+                                        {pkg.features?.map((f, fIdx) => (
+                                          <li key={fIdx} className="text-[10px] text-gray-300 bg-white/5 px-2 py-1 rounded flex justify-between items-center">
+                                            <span>• {f}</span>
+                                            <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => removePkgFeature(idx, fIdx)} />
+                                          </li>
+                                        ))}
+                                      </ul>
+                                  </div>
+                               </div>
+                             ))}
+                           </div>
+                        </div>
+                      ) : (
+                      /* --- SINGLE PRICE FORM --- */
+                        <div className="space-y-6">
+                          <div className="p-6 md:p-8 bg-purple-500/5 border border-purple-500/20 rounded-2xl relative overflow-hidden">
+                            <div className="space-y-3 relative z-10">
+                              <label className="flex items-center text-xs font-bold uppercase tracking-wider text-purple-300 ml-1">
+                                Harga Jual / Harga Akhir (IDR) * <InfoTooltip text="Harga tunggal jasa Anda. Jika pakai Flash Sale, diskon akan dihitung otomatis." />
+                              </label>
+                              <input 
+                                required={!usePackages}
+                                className="w-full px-5 py-4 rounded-xl bg-black/40 border border-purple-500/30 focus:border-purple-400 outline-none transition-colors text-white font-mono font-bold text-2xl md:text-3xl placeholder:text-gray-700" 
+                                placeholder="Rp 0"
+                                value={formData.price || ""} 
+                                onChange={handlePriceChange} 
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                              Estimasi Pengerjaan * <InfoTooltip text="Lama pengerjaan, misalnya: '7-14 Hari Kerja'" />
                             </label>
+                            <input 
+                               className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none text-white text-sm" 
+                               placeholder="Contoh: 2-3 Hari Kerja"
+                               value={formData.duration || ""} 
+                               onChange={e => setFormData({...formData, duration: e.target.value})} 
+                             />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Other Promo metrics (Flash sale / Discount) could go here but omitted to keep it clean, can re-add if needed. Let's keep Flash sale basic switch */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/10">
+                        {/* Kiri: Setelan Diskon & Harga Coret */}
+                        <div className="space-y-4">
+                          <h4 className="text-white font-bold mb-2 flex items-center gap-2">Kalkulator Promo Pintar</h4>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Harga Asli (Otomatis)</label>
+                            <input 
+                              readOnly
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm cursor-not-allowed" 
+                              placeholder="Dihitung otomatis saat diskon diterapkan"
+                              value={formData.originalPrice || ""} 
+                            />
+                            <p className="text-[10px] text-gray-500 ml-1">Nilai ini otomatis diambil dari harga sebelum Anda klik tombol Hitung Diskon.</p>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Tipe Diskon</label>
+                              <select 
+                                className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none text-white text-sm appearance-none"
+                                value={discountType}
+                                onChange={e => setDiscountType(e.target.value as any)}
+                              >
+                                <option value="percent" className="bg-[#111]">Persentase (%)</option>
+                                <option value="nominal" className="bg-[#111]">Nominal (Rp)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Nilai Diskon</label>
+                              <input 
+                                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white text-sm" 
+                                placeholder={discountType === "percent" ? "Misal: 50" : "Misal: 500.000"}
+                                value={discountInput} 
+                                onChange={e => setDiscountInput(discountType === "percent" ? e.target.value.replace(/[^0-9]/g, "") : formatRupiah(e.target.value))} 
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <button 
+                              type="button"
+                              onClick={handleCalculatePromo}
+                              className="flex-1 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-purple-500/20"
+                            >
+                              Potong Harga Saat Ini
+                            </button>
+                            {(formData.originalPrice || formData.discountValue) && (
+                              <button 
+                                type="button"
+                                onClick={handleClearPromo}
+                                className="px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl transition-colors border border-red-500/20"
+                              >
+                                Hapus Promo
+                              </button>
+                            )}
                           </div>
 
-                          {isDiscountActive && (
-                            <div className="space-y-4 animate-in fade-in">
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-orange-200/70 uppercase tracking-wider">Harga Asli (Sebelum Diskon)</label>
-                                <input 
-                                  className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-orange-500/20 focus:border-orange-500 outline-none transition-colors text-gray-300 font-mono text-sm" 
-                                  placeholder="Rp 0"
-                                  value={formData.originalPrice || ""} 
-                                  onChange={handleOriginalPriceChange} 
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-orange-200/70 uppercase tracking-wider">Persentase Diskon (%)</label>
-                                <input 
-                                  type="number" min="0" max="100"
-                                  className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-orange-500/20 focus:border-orange-500 outline-none transition-colors text-orange-300 font-bold text-sm" 
-                                  placeholder="0"
-                                  value={formData.discountValue || 0} 
-                                  onChange={handleDiscountChange} 
-                                />
-                              </div>
-                            </div>
-                          )}
+                          <div className="pt-2 border-t border-white/10 space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-green-500 ml-1">Label Diskon Aktif</label>
+                            <input 
+                              className="w-full px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 font-bold text-sm" 
+                              placeholder="Label diskon akan muncul di sini"
+                              readOnly
+                              value={formData.discountValue || ""} 
+                            />
+                          </div>
                         </div>
 
-                        {/* 2. Toggle Flash Sale */}
-                        <div className={cn(
-                          "p-5 rounded-2xl border transition-all duration-300",
-                          formData.isFlashSale ? "bg-red-500/5 border-red-500/30 shadow-[0_0_20px_-5px_rgba(239,68,68,0.15)]" : "bg-white/[0.02] border-white/5"
-                        )}>
-                          <div className="flex items-center gap-3 mb-6">
-                            <input 
-                              type="checkbox" id="flashSale" 
-                              className="w-5 h-5 rounded bg-black/20 border-white/10 text-red-500 focus:ring-red-500"
-                              checked={!!formData.isFlashSale}
-                              onChange={e => setFormData({...formData, isFlashSale: e.target.checked})}
-                            />
-                            <label htmlFor="flashSale" className={cn("text-sm font-bold cursor-pointer select-none flex items-center gap-2", formData.isFlashSale ? "text-red-400" : "text-gray-400")}>
-                              <Zap size={16} /> Status Flash Sale
-                            </label>
+                        {/* Kanan: Setelan Flash Sale */}
+                        <div className="space-y-4">
+                          <h4 className="text-white font-bold mb-2 flex items-center gap-2">Pengaturan Flash Sale</h4>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Status Flash Sale</label>
+                            <div 
+                              className={cn(
+                                "relative flex items-center w-14 h-8 rounded-full p-1 cursor-pointer transition-colors border shrink-0",
+                                formData.isFlashSale ? "bg-red-500/20 border-red-500/50" : "bg-white/5 border-white/10"
+                              )}
+                              onClick={() => setFormData({...formData, isFlashSale: !formData.isFlashSale})}
+                            >
+                              <div className={cn(
+                                "absolute w-6 h-6 rounded-full transition-transform duration-300 shadow-md",
+                                formData.isFlashSale ? "translate-x-6 bg-red-500" : "translate-x-0 bg-gray-500"
+                              )} />
+                            </div>
                           </div>
-
+                          
                           {formData.isFlashSale && (
-                            <div className="space-y-4 animate-in fade-in">
+                            <div className="space-y-4">
                               <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-red-200/70 uppercase tracking-wider">Tenggat Waktu Penawaran</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Harga Spesial Flash Sale</label>
+                                <input 
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-red-500/50 outline-none transition-colors text-white text-sm" 
+                                  placeholder="Misal: Rp 50.000"
+                                  value={formData.flashSalePrice || ""} 
+                                  onChange={e => setFormData({...formData, flashSalePrice: formatRupiah(e.target.value)})} 
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Tenggat Waktu Flash Sale</label>
                                 <input 
                                   type="datetime-local"
-                                  className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-red-500/20 focus:border-red-500 outline-none transition-colors text-gray-300 font-mono text-sm" 
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-red-500/50 outline-none transition-colors text-white text-sm" 
                                   value={formData.flashSaleEndDate || ""} 
                                   onChange={e => setFormData({...formData, flashSaleEndDate: e.target.value})} 
                                 />
                               </div>
-                              <p className="text-xs text-red-400/80 leading-relaxed italic mt-2">
-                                * Akan mengaktifkan efek merah menyala dan countdown timer di halaman utama.
-                              </p>
                             </div>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Other Metrics */}
-                      <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/10">
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Rating Bintang (0.0 - 5.0)</label>
-                          <input 
-                            type="number" step="0.1" min="0" max="5" 
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-yellow-400 font-bold text-sm" 
-                            value={formData.rating || 0} 
-                            onChange={e => setFormData({...formData, rating: parseFloat(e.target.value)})} 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Angka Penjualan (Mockup)</label>
-                          <input 
-                            type="number" min="0" 
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white font-bold text-sm" 
-                            value={formData.sales || 0} 
-                            onChange={e => setFormData({...formData, sales: parseInt(e.target.value)})} 
-                          />
                         </div>
                       </div>
 
@@ -519,7 +771,7 @@ export default function ServiceFormPage() {
                           <h4 className="text-white font-bold mb-1 flex items-center gap-2">
                             <Star size={16} className="text-yellow-400"/> Highlight sebagai Pilihan Utama
                           </h4>
-                          <p className="text-xs text-gray-500">Tandai layanan ini dengan badge "Recommended".</p>
+                          <p className="text-xs text-gray-500">Tandai layanan ini dengan badge "Rekomendasi".</p>
                         </div>
                         <div 
                           className={cn(
@@ -529,14 +781,16 @@ export default function ServiceFormPage() {
                           onClick={() => setFormData({...formData, recommended: !formData.recommended})}
                         >
                           <div className={cn(
-                            "absolute w-6 h-6 rounded-full transition-transform duration-300 ease-in-out shadow-md",
+                            "absolute w-6 h-6 rounded-full transition-transform duration-300 shadow-md",
                             formData.recommended ? "translate-x-6 bg-yellow-400" : "translate-x-0 bg-gray-500"
                           )} />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">Deskripsi Lengkap (Rich Text)</label>
+                        <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">
+                          Deskripsi Lengkap (Rich Text) <InfoTooltip text="Deskripsi bebas yang tampil di detail jasa. Bisa gunakan format HTML/Rich Text." />
+                        </label>
                         <div className="min-h-[300px]">
                           <TiptapEditor 
                             content={formData.description || ""} 
@@ -545,42 +799,40 @@ export default function ServiceFormPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-6 border-t border-white/10">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1 flex items-center gap-2">
-                          <CheckCircle2 size={14} className="text-emerald-400"/> Daftar Fitur Paket (Bullet Points)
-                        </label>
-                        
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <input 
-                            className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white text-sm" 
-                            placeholder="Contoh: Gratis domain & hosting 1 tahun..."
-                            value={featureInput} 
-                            onChange={e => setFeatureInput(e.target.value)} 
-                            onKeyDown={e => e.key === "Enter" && addFeature(e)}
-                          />
-                          <Button type="button" onClick={addFeature} className="h-11 sm:h-auto rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 px-6 shrink-0">
-                            Tambah <Plus size={16} className="ml-1.5"/>
-                          </Button>
+                      {/* Only show General features if NOT using Packages, to avoid confusion */}
+                      {!usePackages && (
+                        <div className="space-y-4 pt-6 border-t border-white/10">
+                          <label className="flex items-center text-xs font-bold uppercase tracking-wider text-gray-500 ml-1 gap-2">
+                            <CheckCircle2 size={14} className="text-emerald-400"/> Daftar Fitur General <InfoTooltip text="Poin-poin fitur yang dijanjikan. Tampil di sebelah kiri pada halaman detail jasa." />
+                          </label>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <input 
+                              className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-purple-500/50 outline-none transition-colors text-white text-sm" 
+                              placeholder="Contoh: Gratis domain & hosting 1 tahun..."
+                              value={featureInput} 
+                              onChange={e => setFeatureInput(e.target.value)} 
+                              onKeyDown={e => e.key === "Enter" && addFeature(e)}
+                            />
+                            <Button type="button" onClick={addFeature} className="h-11 sm:h-auto rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 px-6 shrink-0">
+                              Tambah <Plus size={16} className="ml-1.5"/>
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-2 mt-4">
+                            {formData.features?.map((feat, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-black/20 px-4 py-3 rounded-xl border border-white/5 group hover:border-white/10 transition-colors">
+                                <span className="text-sm text-gray-300 flex items-center gap-3">
+                                  <CheckCircle2 size={16} className="text-emerald-500/50 group-hover:text-emerald-400 transition-colors" /> {feat}
+                                </span>
+                                <button type="button" onClick={() => removeFeature(idx)} className="text-red-500/50 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg transition-colors">
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        
-                        <div className="space-y-2 mt-4">
-                          {formData.features?.map((feat, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-black/20 px-4 py-3 rounded-xl border border-white/5 group hover:border-white/10 transition-colors">
-                              <span className="text-sm text-gray-300 flex items-center gap-3">
-                                <CheckCircle2 size={16} className="text-emerald-500/50 group-hover:text-emerald-400 transition-colors" /> {feat}
-                              </span>
-                              <button type="button" onClick={() => removeFeature(idx)} className="text-red-500/50 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg transition-colors">
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ))}
-                          {(!formData.features || formData.features.length === 0) && (
-                            <div className="text-center p-8 border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
-                              <p className="text-sm text-gray-600 italic">Belum ada fitur layanan yang ditambahkan.</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      )}
 
                     </div>
                   )}
@@ -635,21 +887,7 @@ export default function ServiceFormPage() {
                                 <Star size={10} className="fill-white" /> Rekomendasi
                               </span>
                             )}
-                            {formData.isFlashSale && (
-                              <span className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 uppercase tracking-wider">
-                                <Zap size={10} className="fill-white" /> Flash Sale
-                              </span>
-                            )}
                           </div>
-                          {isDiscountActive && formData.discountValue ? (
-                            <div className={cn(
-                              "text-white text-xs font-bold px-2.5 py-1.5 rounded-md shadow-lg flex flex-col items-center leading-none",
-                              formData.isFlashSale ? "bg-red-500/90 backdrop-blur-md" : "bg-orange-500/90 backdrop-blur-md"
-                            )}>
-                              <span className="text-sm">{formData.discountValue}%</span>
-                              <span className="text-[8px] uppercase tracking-widest mt-0.5">OFF</span>
-                            </div>
-                          ) : null}
                         </div>
                       </div>
 
@@ -658,9 +896,6 @@ export default function ServiceFormPage() {
                           <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
                             {formData.category || "Kategori"}
                           </span>
-                          <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
-                            <Star size={10} className="fill-yellow-400" /> {(formData.rating ?? 0) > 0 ? formData.rating : "New"}
-                          </div>
                         </div>
 
                         <h3 className="font-heading font-bold text-lg text-white mb-2 leading-snug">
@@ -672,50 +907,21 @@ export default function ServiceFormPage() {
 
                         <div className="mt-auto pt-4 border-t border-white/10 flex items-end justify-between">
                           <div className="flex flex-col">
-                            {isDiscountActive && formData.originalPrice ? (
-                              <>
-                                <span className="text-[10px] text-gray-500 line-through decoration-red-500/50 mb-0.5">{formData.originalPrice}</span>
-                                <span className={cn("text-xl font-bold font-mono tracking-tight", formData.isFlashSale ? "text-red-400" : "text-white")}>{formData.price || "Rp 0"}</span>
-                              </>
-                            ) : (
+                            {usePackages ? (
                               <>
                                 <span className="text-[9px] text-gray-500 uppercase tracking-widest mb-0.5">Mulai Dari</span>
                                 <span className="text-xl font-bold font-mono tracking-tight text-white">{formData.price || "Rp 0"}</span>
                               </>
+                            ) : (
+                              <span className="text-xl font-bold font-mono tracking-tight text-white">{formData.price || "Rp 0"}</span>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Summary Meta */}
-                  <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-gray-500 font-mono">Durasi</span>
-                      <span className="text-gray-300 font-medium">{formData.duration || "-"}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-gray-500 font-mono">Fitur</span>
-                      <span className="text-gray-300 font-medium">{formData.features?.length || 0} Item</span>
-                    </div>
-                  </div>
-
                 </div>
               </div>
-            </div>
-
-            {/* Mobile Sticky Action Bar */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur border-t border-white/10 z-40 flex gap-3">
-              {!isNew && (
-                <Button type="button" variant="destructive" size="lg" className="flex-1" onClick={handleDelete}>
-                  <Trash2 size={18} />
-                </Button>
-              )}
-              <Button type="button" onClick={() => handleSubmit()} size="lg" className="flex-[3] shadow-xl shadow-purple-500/20 bg-purple-600 hover:bg-purple-500 border border-purple-500/50 text-white" disabled={saving}>
-                {saving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>}
-                {isNew ? "Terbitkan" : "Simpan"}
-              </Button>
             </div>
 
           </div>

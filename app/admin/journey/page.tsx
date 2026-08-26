@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { AdminLayout } from "@/components/admin/admin-layout";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { 
@@ -89,15 +89,12 @@ export default function AdminJourney() {
   }), [journeyItems]);
 
   return (
-    <AdminLayout 
-      title="Journey Management" 
-      description="Susun lini masa karir, edukasi, dan pencapaian profesional Anda."
-      actionButton={
-        <Button onClick={() => router.push("/admin/journey/new")} size="lg" className="w-full md:w-auto rounded-xl shadow-lg shadow-primary/20 bg-primary text-white hover:bg-primary/90 font-bold tracking-wide">
-          <Plus size={18} className="mr-2" /> Tambah Journey
-        </Button>
-      }
-    >
+    <>
+      <AdminPageHeader 
+        title="Journey Management" 
+        description="Susun lini masa karir, edukasi, dan pencapaian profesional Anda." 
+        actionButton={{ label: 'Tambah Journey', href: '/admin/journey/new' }}
+      />
       {/* --- QUICK INSIGHTS (STATS) --- */}
       {!loading && journeyItems.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -329,7 +326,7 @@ export default function AdminJourney() {
           </motion.div>
         )}
       </div>
-    </AdminLayout>
+    </>
   );
 }
 

@@ -22,6 +22,7 @@ export default function ServiceDetailPage() {
   const [recommendations, setRecommendations] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
+  const [activePackageIdx, setActivePackageIdx] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -33,9 +34,13 @@ export default function ServiceDetailPage() {
           ]);
           setService(data);
           
-          // Ambil 3 layanan lain secara acak/berurutan sebagai rekomendasi
-          const recs = allData.filter(s => s.id !== id).slice(0, 3);
-          setRecommendations(recs);
+          const liveData = allData.filter(s => !s.isDraft);
+          let recs = liveData.filter(s => s.id !== id && s.recommended);
+          if (recs.length < 3) {
+             const others = liveData.filter(s => s.id !== id && !s.recommended);
+             recs = [...recs, ...others];
+          }
+          setRecommendations(recs.slice(0, 3));
         } catch (error) {
           console.error("Error loading data:", error);
         } finally {
@@ -65,9 +70,20 @@ export default function ServiceDetailPage() {
   }
 
   // Handle WhatsApp Link
+  const activePackage = service.packages && service.packages.length > 0 ? service.packages[activePackageIdx] : null;
+  const isFlashSaleActive = Boolean(service.isFlashSale && service.flashSalePrice);
+  
+  const currentPrice = isFlashSaleActive 
+    ? service.flashSalePrice 
+    : (activePackage ? activePackage.price : service.price);
+    
+  const currentDuration = activePackage ? activePackage.duration : service.duration;
+  const featuresList = activePackage ? activePackage.features : service.features;
+
   const handleOrder = () => {
     const phone = "6285904320201"; 
-    const message = `Halo Iky, saya tertarik untuk order paket layanan: ${service.title} (${service.price}). Boleh minta informasi lebih lanjut?`;
+    const pkgName = activePackage ? ` (Paket ${activePackage.name})` : "";
+    const message = `Halo Iky, saya tertarik untuk order layanan: ${service.title}${pkgName} seharga ${currentPrice}. Boleh minta informasi lebih lanjut?`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -79,7 +95,10 @@ export default function ServiceDetailPage() {
   };
 
   // Logic Diskon
-  const hasDiscount = Boolean(service.originalPrice && service.originalPrice !== "");
+  const displayOriginalPrice = isFlashSaleActive 
+    ? (activePackage ? activePackage.price : (service.originalPrice || service.price)) 
+    : service.originalPrice;
+  const hasDiscount = Boolean(displayOriginalPrice && displayOriginalPrice !== "");
 
   return (
     // INFO: overflow-hidden dihapus agar sticky sidebar bekerja. Diganti dengan overflow-x-hidden jika perlu, tapi overflow-clip di background lebih aman.
@@ -149,11 +168,13 @@ export default function ServiceDetailPage() {
                 <div className="p-3 bg-red-500 rounded-xl text-white animate-pulse shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.5)]">
                   <Zap size={24} fill="currentColor" />
                 </div>
-                <div>
+                <div className="flex-1 w-full">
                   <h3 className="font-bold text-red-100 text-lg md:text-xl font-heading">Sedang Flash Sale!</h3>
-                  <div className="flex items-center gap-2 text-sm text-red-300 mt-1">
-                    <Timer size={16} />
-                    <span>Harga spesial ini akan berakhir segera. Amankan slot Anda sekarang.</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-red-300 mt-2">
+                    <span className="flex items-center gap-1.5"><Timer size={16} /> Berakhir dalam:</span>
+                    {(service as any).flashSaleEndDate && (
+                      <DetailCountdown targetDateStr={(service as any).flashSaleEndDate} />
+                    )}
                   </div>
                 </div>
               </div>
@@ -176,13 +197,13 @@ export default function ServiceDetailPage() {
               {/* Features List */}
               <div className="mt-10 pt-8 border-t border-white/10">
                 <h3 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2 text-white font-heading">
-                  <ShieldCheck className="text-green-400" size={24} /> Yang Akan Anda Dapatkan:
+                  <ShieldCheck className="text-green-400" size={24} /> Yang Akan Anda Dapatkan {activePackage && <span className="text-primary text-sm bg-primary/10 px-2 py-1 rounded-md ml-2 border border-primary/20">Paket {activePackage.name}</span>}:
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {service.features.map((feat, idx) => (
+                  {featuresList.map((feat, idx) => (
                     <div key={idx} className="flex items-start gap-3 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
                       <CheckCircle size={18} className="text-primary mt-0.5 shrink-0" />
-                      <span className="text-sm text-gray-300">{feat}</span>
+                      <span className="text-sm text-gray-300 leading-relaxed">{feat}</span>
                     </div>
                   ))}
                 </div>
@@ -230,24 +251,71 @@ export default function ServiceDetailPage() {
                   )}
                 </div>
 
+                {/* --- PACKAGE SELECTOR (If Packages Exist) --- */}
+                {service.packages && service.packages.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-xs font-mono uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
+                      <Sparkles size={14} className="text-primary" /> Pilih Paket Layanan
+                    </h3>
+                    <div className="flex flex-col gap-3">
+                      {service.packages.map((pkg, idx) => (
+                        <div 
+                          key={idx}
+                          onClick={() => setActivePackageIdx(idx)}
+                          className={cn(
+                            "cursor-pointer p-4 rounded-2xl border transition-all duration-300 relative overflow-hidden group",
+                            activePackageIdx === idx 
+                              ? "border-primary bg-primary/5 shadow-[0_0_20px_rgba(99,102,241,0.15)]" 
+                              : "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20"
+                          )}
+                        >
+                          <div className="flex justify-between items-start mb-2 relative z-10">
+                            <span className={cn(
+                              "font-bold font-heading uppercase tracking-wider text-sm",
+                              activePackageIdx === idx ? "text-primary" : "text-white"
+                            )}>{pkg.name}</span>
+                            <span className={cn(
+                              "font-mono text-sm font-bold tracking-tight",
+                              activePackageIdx === idx ? "text-white" : "text-gray-400"
+                            )}>{pkg.price}</span>
+                          </div>
+                          <p className="text-xs text-gray-400 relative z-10 leading-relaxed">
+                            {pkg.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Pricing Display */}
-                <div className="mb-8">
+                <div className="mb-8 p-6 bg-white/[0.02] rounded-2xl border border-white/5">
                   {hasDiscount && (
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center gap-3 mb-2">
                       <span className="text-sm text-gray-500 line-through decoration-red-500/50">
-                        {service.originalPrice}
+                        {displayOriginalPrice}
                       </span>
-                      <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded font-bold border border-red-500/20 uppercase tracking-wider">
-                        Diskon {service.discountValue}%
+                      <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-1 rounded font-bold border border-red-500/20 uppercase tracking-widest">
+                        {isFlashSaleActive ? "FLASH SALE" : service.discountValue}
                       </span>
                     </div>
                   )}
-                  <div className={cn("text-4xl md:text-5xl font-bold font-mono tracking-tight", hasDiscount ? "text-red-400" : "text-white")}>
-                    {service.price}
+                  <div className="flex flex-col gap-1">
+                    {service.packages && service.packages.length > 0 && (
+                       <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Total Harga Paket {activePackage?.name}:</span>
+                    )}
+                    <div className={cn("text-3xl md:text-4xl lg:text-5xl font-black font-mono tracking-tighter", hasDiscount ? "text-red-400" : "text-white")}>
+                      {currentPrice}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-3 font-medium">
-                    <Clock size={16} className="text-gray-400" /> Estimasi pengerjaan: <span className="text-white">{service.duration}</span>
+                  <div className="flex items-center gap-2 text-sm text-gray-400 mt-4 font-medium bg-black/20 p-3 rounded-xl border border-white/5">
+                    <Clock size={16} className="text-primary" /> Estimasi pengerjaan: <span className="text-white font-bold">{currentDuration}</span>
                   </div>
+                  {activePackage && activePackage.revisions && (
+                    <div className="flex items-center gap-2 text-sm text-gray-400 mt-2 font-medium bg-black/20 p-3 rounded-xl border border-white/5">
+                      <CheckCircle2 size={16} className="text-primary" /> Jatah Revisi: <span className="text-white font-bold">{activePackage.revisions}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -347,6 +415,51 @@ export default function ServiceDetailPage() {
 }
 
 // --- SUB-COMPONENTS FOR BOTTOM SECTIONS ---
+
+function DetailCountdown({ targetDateStr }: { targetDateStr: string }) {
+  const [timeLeft, setTimeLeft] = useState<string>("");
+
+  useEffect(() => {
+    if (!targetDateStr) return;
+    const targetDate = new Date(targetDateStr).getTime();
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        setTimeLeft("EXPIRED");
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      if (days > 0) {
+        setTimeLeft(`${days} Hari ${hours} Jam ${minutes} Menit`); 
+      } else {
+        const h = hours < 10 ? `0${hours}` : hours;
+        const m = minutes < 10 ? `0${minutes}` : minutes;
+        const s = seconds < 10 ? `0${seconds}` : seconds;
+        setTimeLeft(`${h}:${m}:${s}`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [targetDateStr]);
+
+  if (!timeLeft || timeLeft === "EXPIRED") return <span className="font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Berakhir</span>;
+
+  return (
+    <span className="font-mono font-bold text-white bg-red-500 px-3 py-1 rounded-md tracking-wider shadow-lg">
+      {timeLeft}
+    </span>
+  );
+}
 
 // Card Minimalis untuk Rekomendasi
 function CompactServiceCard({ item, onClick }: { item: ServicePackage, onClick: () => void }) {

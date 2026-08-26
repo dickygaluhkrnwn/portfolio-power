@@ -316,7 +316,7 @@ export default function BlogPostForm() {
                           </span>
                         </label>
                         <textarea 
-                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-gray-300 min-h-[80px] resize-none placeholder:text-gray-700 leading-relaxed" 
+                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary outline-none transition-colors text-gray-300 min-h-[80px] resize-y placeholder:text-gray-700 leading-relaxed" 
                           value={formData.excerpt} 
                           onChange={e => setFormData({...formData, excerpt: e.target.value})} 
                           placeholder="Ringkasan singkat untuk ditampilkan di kartu artikel (maks. 160 karakter direkomendasikan)."
@@ -412,6 +412,29 @@ export default function BlogPostForm() {
                           {(!formData.tags || formData.tags.length === 0) && (
                             <p className="text-sm text-gray-600 italic m-auto">Belum ada tag ditambahkan.</p>
                           )}
+                        </div>
+                      </div>
+
+                      {/* SEO Preview (Google) */}
+                      <div className="space-y-3 pt-6 border-t border-white/10">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1 flex items-center gap-2">
+                          <Globe size={14} /> Pratinjau SEO (Google)
+                        </label>
+                        <div className="bg-[#fff] p-5 rounded-2xl max-w-[600px] shadow-lg">
+                          <div className="text-[12px] text-[#202124] flex items-center gap-1.5 mb-1.5 font-sans">
+                            <span className="bg-[#f1f3f4] w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold">D</span>
+                            <span>dickygaluhkrnwn.my.id</span>
+                            <span className="text-[#5f6368] truncate flex-1"> › blog › {formData.slug || "judul-artikel"}</span>
+                          </div>
+                          <div className="text-[20px] text-[#1a0dab] cursor-pointer hover:underline mb-1 font-medium leading-snug font-sans">
+                            {formData.title || "Judul Artikel Anda Akan Tampil Di Sini"}
+                          </div>
+                          <div className="text-[14px] text-[#4d5156] line-clamp-2 leading-normal font-sans">
+                            <span className="text-[#70757a] mr-2 font-medium">
+                              {new Date(formData.publishedAt || new Date()).toLocaleDateString("id-ID", { month: "short", day: "numeric", year: "numeric" })} —
+                            </span>
+                            {formData.excerpt || "Ringkasan artikel (excerpt) akan muncul di sini sebagai meta description. Pastikan ringkasan ini menarik agar pengunjung mau mengklik tautan Anda di Google."}
+                          </div>
                         </div>
                       </div>
                     </div>

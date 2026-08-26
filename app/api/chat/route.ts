@@ -1,138 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getAllProjects } from "@/lib/projects-service";
-import { getAllServices } from "@/lib/services-service";
-import { getPublishedPosts } from "@/lib/blog-service";
-
-// Inisialisasi dilakukan per-request agar aman
+import { getPortfolioContext } from "@/lib/portfolio-context";
+import { chatWithGroq } from "@/lib/groq";
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Cek API Key
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("CRITICAL: GEMINI_API_KEY is missing in .env.local");
-      return NextResponse.json(
-        { error: "Server Configuration Error: API Key missing" },
-        { status: 500 }
-      );
-    }
-
+    // 1. Parse incoming messages
     const { messages } = await req.json();
 
-    // 2. AMBIL & KOMPRESI DATA (HEMAT TOKEN)
-    // Kita ambil data langsung dan membuang field berat (seperti konten HTML panjang/gambar)
-    // sehingga AI hanya membaca inti sarinya saja dengan token yang sangat minim.
-    const [projectsData, servicesData, blogsData] = await Promise.all([
-      getAllProjects(),
-      getAllServices(),
-      getPublishedPosts()
-    ]);
-
-    // Tambahkan Index/Urutan agar AI tahu mana yang terbaru (Asumsi index 0 = terbaru)
-    const miniProjects = projectsData.map((p, index) => ({
-      urutan_terbaru: index + 1, // Angka 1 berarti paling baru
-      nama: p.title,
-      kategori: p.category,
-      tahun: p.year || "Tidak disebutkan",
-      deskripsi: p.desc || (p as any).description,
-      teknologi: p.techStack?.map(t => t.name).join(", ") || "Tidak disebutkan",
-      link_detail: `/projects/${p.id}`,
-      demo: p.demoLink || null,
-      repo: p.repoLink || null
-    }));
-
-    const miniServices = servicesData.map(s => ({
-      nama: s.title,
-      kategori: s.category,
-      harga: s.price,
-      deskripsi_singkat: s.shortDesc,
-      link_detail: `/services/${s.id}`
-    }));
-
-    const miniBlogs = blogsData.map((b, index) => ({
-      urutan_terbaru: index + 1,
-      judul: b.title,
-      topik: b.tags?.join(", ") || "Umum",
-      ringkasan: b.excerpt,
-      link_detail: `/blog/${b.slug}`
-    }));
-
-    // "Otak" baru yang super komprehensif tapi ringan
-    const superContext = `
-    [PROFIL DICKY]
-    Nama: Dicky Galuh Kurniawan (Panggilan: Iky)
-    Role: Full Stack Developer
-    Fokus: Membangun aplikasi web modern, cepat, dan user-friendly.
-    Kontak: dicky.galuh.kurniawan1@gmail.com, GitHub: dickygaluhkrnwn, LinkedIn: dickygaluhkrnwn
-
-    [DATA PROJECT DICKY] (Urutan 1 adalah yang paling baru)
-    ${JSON.stringify(miniProjects)}
-
-    [DATA LAYANAN/SERVICES DICKY]
-    ${JSON.stringify(miniServices)}
-
-    [DATA ARTIKEL/BLOG DICKY] (Urutan 1 adalah yang paling baru)
-    ${JSON.stringify(miniBlogs)}
-    `;
-
-    // 3. Format History
-    const rawHistory = messages.slice(0, -1);
-    const firstUserIndex = rawHistory.findIndex((msg: any) => msg.role === 'user');
-    
-    let validHistory = [];
-    if (firstUserIndex !== -1) {
-      validHistory = rawHistory.slice(firstUserIndex).map((msg: any) => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }],
-      }));
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
     }
 
-    // 4. Inisialisasi Gemini Client
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // MENGGUNAKAN MODEL VERSI AMAN YANG TERBUKTI JALAN ("gemini-2.5-flash")
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: {
-        role: "system",
-        parts: [{ text: `
-          Kamu adalah AI Assistant eksklusif untuk Portofolio Dicky. 
-          Tugasmu menjawab pertanyaan pengunjung tentang proyek, layanan, atau artikel Dicky berdasarkan DATA JSON yang diberikan di bawah ini.
-          
-          ATURAN EMAS (WAJIB DIIKUTI):
-          1. BACA DATA JSON DENGAN TELITI: Perhatikan properti 'urutan_terbaru'. Jika ditanya "Project atau Blog terbaru", pastikan kamu mengambil item dengan urutan_terbaru nomor 1.
-          2. JANGAN PERNAH MENGARANG (HALLUCINATE): Jika data tidak ada di JSON, bilang dengan sopan bahwa kamu belum punya informasinya.
-          3. SELALU BERIKAN LINK KLIKABEL (MARKDOWN): Saat kamu menyebutkan nama Project, Layanan, atau Blog yang ada di data, kamu WAJIB membungkusnya dengan link menggunakan properti 'link_detail'.
-             Contoh Format Output: 
-             "Proyek terbaru Dicky adalah **[28 Coffee](/projects/1)**. Teknologi yang digunakan adalah React. Anda bisa melihat live demonya [di sini](https://demo.com)."
-          4. BAHASA: Ramah, santai, profesional, dan gunakan bahasa Indonesia. Jangan menjawab dalam format JSON kaku, melainkan ubah jadi paragraf atau daftar (bullet points) yang enak dibaca manusia.
-          
-          KONTEKS DATA (SUMBER KEBENARANMU):
-          ${superContext}
-        `}],
-      },
-    });
+    // 2. AMBIL KONTEKS SUPER DARI PORTFOLIO CONTEXT
+    // Konteks ini sudah diperbarui dengan detail Paket Berjenjang, Flash Sale, dll.
+    const superContextData = await getPortfolioContext();
 
-    const lastMessage = messages[messages.length - 1].content;
+    // 3. System Instruction yang sangat kuat
+    const systemInstruction = `Kamu adalah AI Assistant eksklusif untuk Portofolio Dicky. 
+Tugasmu menjawab pertanyaan pengunjung tentang proyek, layanan, atau artikel Dicky berdasarkan DATA yang diberikan di bawah ini.
 
-    // 5. Mulai Chat Session
-    const chatSession = model.startChat({
-      history: validHistory,
-    });
+ATURAN EMAS (WAJIB DIIKUTI):
+1. BACA DATA DENGAN TELITI. Jika ditanya tentang layanan, pastikan kamu menawarkan paket yang sesuai jika ada paket berjenjang (Basic/Standard/Premium).
+2. JANGAN PERNAH MENGARANG (HALLUCINATE): Jika data tidak ada, bilang dengan sopan bahwa kamu belum punya informasinya.
+3. JAWAB SINGKAT PADAT JELAS. Jika user hanya menyapa, sapa balik dengan ramah tanpa perlu memberikan daftar panjang.
+4. JUALAN & MARKETING: Jika user menanyakan jasa, berikan jawaban persuasif layaknya sales profesional dan sebutkan benefit atau diskon/flash sale jika sedang aktif!
+5. BAHASA: Ramah, santai, profesional, dan gunakan bahasa Indonesia. Gunakan format markdown (bullet points, bold) agar enak dibaca.
+6. SELALU BERIKAN LINK KLIKABEL (MARKDOWN): Saat menyebutkan Proyek atau Layanan, bungkus dengan link menggunakan format markdown. Contoh: [Web E-Commerce](/projects/1) atau [Jasa Pembuatan Web](/services/2).
+7. DILARANG KERAS MENGGUNAKAN HTML TAGS (seperti <br>, <a>, <b>). SELALU GUNAKAN PURE MARKDOWN UNTUK FORMATTING.
 
-    // 6. Kirim pesan TANPA streaming (Metode aman terbukti berhasil)
-    const result = await chatSession.sendMessage(lastMessage);
+KONTEKS DATA (SUMBER KEBENARANMU):
+${superContextData}`;
 
-    // 7. Kembalikan response JSON murni
-    return NextResponse.json({ result: result.response.text() });
+    // 4. Panggil Groq API
+    const responseText = await chatWithGroq(messages, systemInstruction);
+
+    // 5. Kembalikan response JSON murni
+    return NextResponse.json({ result: responseText });
 
   } catch (error: any) {
     console.error("Error in chat API:", error);
     
-    // Tangkap error spesifik
-    const errorMessage = error.message || "Terjadi kesalahan pada server AI.";
+    let errorMessage = error.message || "Terjadi kesalahan pada server AI.";
     
+    // Tangkap error spesifik Rate Limit dari Groq
+    if (errorMessage.toLowerCase().includes("rate limit") || errorMessage.includes("429")) {
+      errorMessage = "Sistem AI kami sedang melayani banyak antrean pengunjung saat ini. 🙏 Mohon tunggu beberapa detik dan coba kirim pesan Anda lagi ya!";
+    }
+
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }

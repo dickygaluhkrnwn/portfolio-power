@@ -1,24 +1,134 @@
+export interface PricingTier {
+  name: "Basic" | "Standard" | "Premium";
+  description: string;
+  price: string;
+  duration: string;
+  revisions: string;
+  features: string[];
+}
+
 export interface ServicePackage {
   id: string;
   title: string;
-  price: string;
+  price: string; // Starting price if packages exist
   duration: string;
   shortDesc: string;
-  description: string; // Berisi HTML untuk Rich Text
+  description: string; // HTML for Rich Text
   thumbnail: string;
-  category: "frontend" | "fullstack" | "backend" | "maintenance";
-  features: string[];
+  category: "frontend" | "fullstack" | "backend" | "maintenance" | "mobile";
+  features: string[]; // General features (fallback if no packages)
   recommended?: boolean;
   rating?: number;
   sales?: number;
   
-  // Field Baru untuk Flash Sale & Diskon
   isFlashSale?: boolean;
-  originalPrice?: string; // Harga Coret (e.g. "Rp 5.000.000")
-  discountValue?: number; // Persentase (e.g. 40)
+  flashSalePrice?: string;
+  originalPrice?: string; 
+  discountValue?: string;
+
+  packages?: PricingTier[]; // Optional dynamic packages
+  tags?: string[]; // SEO / Visibilitas
+  isDraft?: boolean; // Sembunyikan dari publik
 }
 
 export const servicesData: ServicePackage[] = [
+  {
+    id: "s-12",
+    title: "Pembuatan Aplikasi Mobile Premium (Android & iOS) + Integrasi AI",
+    price: "Rp 2.500.000",
+    duration: "Mulai 5 Hari",
+    shortDesc: "Aplikasi mobile lintas platform modern (Android & iOS) dengan UI/UX sekelas global, fitur mutakhir, dan integrasi kecerdasan buatan (AI).",
+    description: `
+      <p class="mb-4">Halo! Butuh aplikasi mobile modern, cepat, dan terlihat premium untuk bisnis atau ide startup Anda? Anda berada di tempat yang tepat!</p>
+      <p class="mb-6">Saya adalah Mobile App Developer yang berspesialisasi dalam membangun aplikasi lintas platform (Android & iOS) dengan antarmuka (UI/UX) sekelas aplikasi global.</p>
+      
+      <h3 class="text-lg font-bold mb-2 text-primary">🔥 Spesialisasi Saya:</h3>
+      <ul class="space-y-2 mb-6 list-none text-muted-foreground">
+        <li>✅ <strong>Aplikasi Produktivitas & Utilitas:</strong> Seperti To-Do List, Habit Tracker, Note-taking, dan Dashboard Analitik.</li>
+        <li>✅ <strong>Integrasi Kecerdasan Buatan (AI):</strong> Menghubungkan aplikasi Anda dengan AI canggih (Google Gemini / OpenAI ChatGPT) untuk fitur smart chat, ringkasan teks, atau pemrosesan data otomatis.</li>
+        <li>✅ <strong>UI/UX Premium:</strong> Desain modern (Light/Dark Mode) dengan animasi mulus dan interaksi yang memanjakan pengguna.</li>
+      </ul>
+
+      <h3 class="text-lg font-bold mb-2 text-primary">💻 Tech Stack yang Digunakan:</h3>
+      <ul class="space-y-2 mb-6 list-none text-muted-foreground">
+        <li><strong>Frontend:</strong> React Native & Expo (Satu kode untuk Android & iOS).</li>
+        <li><strong>Backend & Database:</strong> Google Firebase (Authentication, Cloud Firestore) yang real-time dan super aman.</li>
+        <li><strong>Styling:</strong> NativeWind (Tailwind CSS) & Reanimated untuk animasi 60fps.</li>
+      </ul>
+
+      <div class="p-4 mb-6 bg-primary/10 border-l-4 border-primary rounded-r-lg text-sm text-foreground/80">
+        <strong>Kelebihan Bekerja Sama dengan Saya:</strong><br/>
+        ✔️ Kode terstruktur, rapi, dan mudah dikembangkan di masa depan (Scalable).<br/>
+        ✔️ Komunikasi responsif dan transparan.<br/>
+        ✔️ Gratis konsultasi arsitektur aplikasi sebelum mulai.
+      </div>
+      <p>Mari diskusikan ide aplikasi Anda, dan mari kita wujudkan menjadi nyata!</p>
+    `,
+    thumbnail: "https://images.unsplash.com/photo-1618761714954-0b8cd0026356?q=80&w=2070&auto=format&fit=crop", 
+    category: "mobile",
+    features: [
+      "Pembuatan UI/UX Premium",
+      "React Native & Expo",
+      "Integrasi Firebase",
+      "Kecerdasan Buatan (AI)"
+    ],
+    recommended: true,
+    rating: 5.0,
+    sales: 12,
+    
+    isFlashSale: false, 
+    originalPrice: "",
+    discountValue: "",
+    tags: [
+      "pembuatan aplikasi", "react native", "android developer", "ios developer", 
+      "firebase", "integrasi AI", "aplikasi mobile", "bikin aplikasi", 
+      "aplikasi produktivitas", "expo"
+    ],
+    isDraft: false,
+
+    packages: [
+      {
+        name: "Basic",
+        description: "Konversi desain UI Anda menjadi kode aplikasi React Native fungsional (tanpa database online/API). Cocok untuk purwarupa (MVP) visual atau aplikasi offline.",
+        price: "Rp 2.500.000",
+        duration: "5 Hari",
+        revisions: "2 Kali",
+        features: [
+          "File Source Code Lengkap",
+          "File APK (Android) Siap Install",
+          "UI Responsif (Maks 5 Halaman)",
+          "Tanpa Database / Offline"
+        ]
+      },
+      {
+        name: "Standard",
+        description: "Aplikasi Mobile (Android/iOS) lengkap dengan sistem Login, Database (CRUD), profil user, dan penyimpanan awan (Firebase).",
+        price: "Rp 5.500.000",
+        duration: "14 Hari",
+        revisions: "3 Kali",
+        features: [
+          "Semua Fitur Basic",
+          "Integrasi Firebase Auth & Firestore",
+          "Maksimal 10 Halaman",
+          "Bantuan Upload ke Google Play Store"
+        ]
+      },
+      {
+        name: "Premium",
+        description: "Solusi All-in-One. Aplikasi dinamis lengkap (Paket Standard) DITAMBAH integrasi AI (Gemini/ChatGPT API), Animasi Kompleks, dan Dark Mode.",
+        price: "Rp 9.500.000",
+        duration: "25 Hari",
+        revisions: "Tidak Terbatas",
+        features: [
+          "Semua Fitur Standard",
+          "Integrasi AI API (Gemini/ChatGPT)",
+          "Desain Premium & Animasi Kompleks",
+          "Maksimal 15 Halaman",
+          "Dark / Light Mode"
+        ]
+      }
+    ]
+  },
   {
     id: "s-10",
     title: "Website Redesign & Optimization",
@@ -32,21 +142,6 @@ export const servicesData: ServicePackage[] = [
       <div class="p-4 mb-6 bg-green-500/10 border-l-4 border-green-500 rounded-r-lg text-sm text-green-200">
         <strong>🚀 Target Kami:</strong> Skor Google Lighthouse di atas 90 (Hijau) untuk Performance, Accessibility, dan SEO.
       </div>
-
-      <h3 class="text-lg font-bold mb-2 text-primary">Apa Saja yang Dirombak?</h3>
-      <ul class="space-y-2 mb-6 list-none text-muted-foreground">
-        <li>✅ <strong>UI/UX Modern:</strong> Mengubah tampilan kaku menjadi fluid, estetik, dan enak dipandang (User Friendly).</li>
-        <li>✅ <strong>Struktur Kode:</strong> Migrasi dari CMS berat (seperti WP lama) atau HTML lawas ke React/Next.js yang ringan.</li>
-        <li>✅ <strong>Optimasi Aset:</strong> Kompresi gambar otomatis (WebP), lazy loading, dan pembersihan script sampah.</li>
-      </ul>
-
-      <h3 class="text-lg font-bold mb-2 text-primary">Tanda Website Anda Butuh Ini:</h3>
-      <ul class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6 text-sm">
-        <li class="flex items-center gap-2"><span class="text-red-400">●</span> Loading lebih dari 5 detik</li>
-        <li class="flex items-center gap-2"><span class="text-red-400">●</span> Tampilan hancur di HP</li>
-        <li class="flex items-center gap-2"><span class="text-red-400">●</span> Susah ditemukan di Google</li>
-        <li class="flex items-center gap-2"><span class="text-red-400">●</span> Desain terlihat seperti tahun 2010</li>
-      </ul>
     `,
     thumbnail: "https://i.imgur.com/placeholder-redesign.jpg", 
     category: "frontend",
@@ -61,12 +156,7 @@ export const servicesData: ServicePackage[] = [
     ],
     recommended: false,
     rating: 4.8,
-    sales: 56,
-    
-    // Contoh Data Diskon (Bisa diaktifkan lewat Admin nanti)
-    isFlashSale: false, 
-    originalPrice: "",
-    discountValue: 0
+    sales: 56
   },
   {
     id: "s-11", 
@@ -76,18 +166,7 @@ export const servicesData: ServicePackage[] = [
     shortDesc: "Website media online siap trafik tinggi. CMS mudah dipakai, slot iklan strategis (AdSense ready), dan SEO friendly.",
     description: `
       <p class="mb-4"><strong>Bangun media digital Anda sendiri dengan platform yang powerful.</strong></p>
-      <p class="mb-6">Paket <em>Portal Berita</em> ini dirancang khusus untuk publisher, komunitas, atau instansi yang rutin menerbitkan artikel. Kami fokus pada dua hal: <strong>Kemudahan Menulis</strong> bagi admin dan <strong>Kenyamanan Membaca</strong> bagi pengunjung.</p>
-      
-      <h3 class="text-lg font-bold mb-2 text-primary">Fitur Khusus Publisher:</h3>
-      <ul class="space-y-2 mb-6 list-none text-muted-foreground">
-        <li>✅ <strong>CMS User Friendly:</strong> Dashboard admin yang semudah mengetik di Word. Support upload gambar, video, dan embed sosmed.</li>
-        <li>✅ <strong>AdSense Optimized:</strong> Tata letak sudah disiapkan dengan slot iklan strategis (Header, In-Article, Sidebar) untuk memaksimalkan revenue tanpa mengganggu pembaca.</li>
-        <li>✅ <strong>Related Articles:</strong> Fitur "Artikel Terkait" cerdas untuk menjaga pembaca tetap lama di website Anda (Bounce Rate rendah).</li>
-      </ul>
-
-      <div class="p-4 bg-secondary/20 border-l-4 border-primary rounded-r-lg italic text-sm text-foreground/80">
-        "Konten adalah raja, tapi platform adalah istananya. Kami bangun istana yang megah agar konten Anda dihargai."
-      </div>
+      <p class="mb-6">Paket <em>Portal Berita</em> ini dirancang khusus untuk publisher, komunitas, atau instansi yang rutin menerbitkan artikel.</p>
     `,
     thumbnail: "https://i.imgur.com/placeholder-news.jpg",
     category: "fullstack",
@@ -96,17 +175,10 @@ export const servicesData: ServicePackage[] = [
       "Manajemen Kategori & Tag",
       "Manajemen Penulis (Author)",
       "Slot Iklan Dinamis",
-      "Fitur Share ke Sosmed",
-      "Schema Markup Berita (SEO)",
-      "Newsletter Subscription Form"
+      "Fitur Share ke Sosmed"
     ],
     recommended: false,
     rating: 4.9,
-    sales: 22,
-
-    // Default Diskon Kosong
-    isFlashSale: false,
-    originalPrice: "",
-    discountValue: 0
+    sales: 22
   }
 ];

@@ -8,17 +8,24 @@ import { getAllServices } from "@/lib/services-service";
 import { ServicePackage } from "@/app/data/services";
 import { 
   Search, X, Loader2, Sparkles, Filter, 
-  Star, ShoppingCart, ArrowRight, Zap, Timer, CheckCircle2, ArrowDownUp
+  Star, ShoppingCart, ArrowRight, Zap, Timer, CheckCircle2, ArrowDownUp,
+  Monitor, Smartphone, Database, PenTool, Code2, LayoutGrid, ChevronLeft, ChevronRight,
+  Palette, Megaphone, SearchCode, Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Kategori Layanan
+// --- ENHANCED CATEGORIES WITH ICONS (Shopee-Style Round Icons) ---
 const categories = [
-  { id: "all", label: "Semua Produk" },
-  { id: "frontend", label: "Frontend" },
-  { id: "backend", label: "Backend" },
-  { id: "fullstack", label: "Fullstack App" },
-  { id: "maintenance", label: "Maintenance" },
+  { id: "all", label: "Semua Produk", icon: <LayoutGrid size={24} />, color: "from-blue-500 to-cyan-400" },
+  { id: "mobile", label: "Mobile App", icon: <Smartphone size={24} />, color: "from-purple-500 to-indigo-400" },
+  { id: "frontend", label: "Frontend", icon: <Monitor size={24} />, color: "from-emerald-500 to-teal-400" },
+  { id: "backend", label: "Backend", icon: <Database size={24} />, color: "from-orange-500 to-amber-400" },
+  { id: "fullstack", label: "Fullstack", icon: <Code2 size={24} />, color: "from-rose-500 to-pink-400" },
+  { id: "design", label: "UI/UX Design", icon: <Palette size={24} />, color: "from-fuchsia-500 to-pink-400" },
+  { id: "marketing", label: "Marketing", icon: <Megaphone size={24} />, color: "from-red-500 to-orange-400" },
+  { id: "seo", label: "SEO Opt", icon: <SearchCode size={24} />, color: "from-lime-500 to-green-400" },
+  { id: "consulting", label: "Consulting", icon: <Briefcase size={24} />, color: "from-amber-600 to-yellow-500" },
+  { id: "maintenance", label: "Maintenance", icon: <PenTool size={24} />, color: "from-gray-500 to-slate-400" },
 ];
 
 export default function ServicesPage() {
@@ -26,16 +33,19 @@ export default function ServicesPage() {
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State Filter, Search, Sort & Slider
+  // State Filter, Search, Sort
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
+  
+  // Slider State
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     async function loadData() {
       const data = await getAllServices();
-      setServices(data);
+      // Filter out draft services
+      setServices(data.filter(s => !s.isDraft));
       setLoading(false);
     }
     loadData();
@@ -43,38 +53,50 @@ export default function ServicesPage() {
 
   // Filter Logic: Flash Sale Items
   const flashSaleItems = useMemo(() => services.filter(s => s.isFlashSale), [services]);
+  const recommendedItems = useMemo(() => services.filter(s => s.recommended && !s.isFlashSale), [services]);
 
-  // Siapkan layanan untuk Hero Slider (Ambil 5 terbaik/rekomendasi)
-  const featuredServices = useMemo(() => {
+  // Siapkan layanan untuk Shopee-Style Hero (Ambil 5 terbaik)
+  const heroServices = useMemo(() => {
     const featured = services.filter(s => s.recommended || s.isFlashSale);
-    return featured.length > 0 ? featured.slice(0, 5) : services.slice(0, 5);
+    return featured.length >= 5 ? featured.slice(0, 5) : services.slice(0, 5);
   }, [services]);
+
+  // Pisahkan untuk Slider (Kiri) dan Static Promos (Kanan)
+  const sliderItems = heroServices.slice(0, Math.max(heroServices.length - 2, 1));
+  const staticItems = heroServices.slice(sliderItems.length, sliderItems.length + 2);
 
   // Auto-Slider Timer
   useEffect(() => {
-    if (featuredServices.length <= 1) return;
+    if (sliderItems.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % featuredServices.length);
-    }, 5000); // Ganti slide setiap 5 detik
+      setCurrentSlide((prev) => (prev + 1) % sliderItems.length);
+    }, 4000); // Ganti slide setiap 4 detik
     return () => clearInterval(timer);
-  }, [featuredServices.length]);
-  
+  }, [sliderItems.length]);
+
+  const handlePrevSlide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentSlide((prev) => (prev - 1 + sliderItems.length) % sliderItems.length);
+  };
+
+  const handleNextSlide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentSlide((prev) => (prev + 1) % sliderItems.length);
+  };
+
   // Logic Filtering & Sorting Utama
   const filteredServices = useMemo(() => {
     let result = services.filter((item) => {
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            (item.shortDesc || "").toLowerCase().includes(searchQuery.toLowerCase());
+                            (item.shortDesc || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (item.tags && item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
       const matchesCategory = activeCategory === "all" || item.category === activeCategory;
       
       return matchesSearch && matchesCategory;
     });
 
-    // Terapkan Pengurutan
     if (sortBy === "popular") {
       result.sort((a, b) => (b.sales || 0) - (a.sales || 0));
-    } else {
-      // Default newest (asumsi data awal sudah berurut terbaru)
-      // Jika butuh sorting by date, bisa ditambahkan logic tanggal di sini
     }
 
     return result;
@@ -91,145 +113,198 @@ export default function ServicesPage() {
         <div className="absolute bottom-[10%] left-[-10%] w-[400px] h-[400px] bg-accent/5 rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
-      {/* Disamakan spasi atasnya dengan halaman Projects: pt-28 md:pt-40 */}
-      <div className="relative z-10 w-full pt-28 md:pt-40">
+      <div className="relative z-10 w-full pt-24 md:pt-32">
         
-        {/* --- 1. HERO FEATURED SLIDER (Marketplace Banner) --- */}
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12 md:mb-20">
+        {/* =========================================
+            1. HERO SECTION (SHOPEE STYLE)
+        ========================================= */}
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-8 md:mb-12">
           {loading ? (
-            <div className="w-full h-[350px] md:h-[480px] bg-white/5 rounded-[2rem] animate-pulse border border-white/10" />
-          ) : featuredServices.length > 0 ? (
-            <div className="w-full h-[350px] md:h-[480px] relative rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group bg-[#050505]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide}
-                  initial={{ opacity: 0, scale: 1.02 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                  className="absolute inset-0"
-                >
-                  <div 
-                    onClick={() => router.push(`/services/${featuredServices[currentSlide].id}`)} 
-                    className="block w-full h-full relative outline-none cursor-pointer"
+            <div className="w-full h-[300px] md:h-[400px] lg:h-[450px] bg-white/5 rounded-2xl animate-pulse border border-white/10" />
+          ) : sliderItems.length > 0 ? (
+            <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[450px]">
+              
+              {/* KIRI: Slider Carousel (Lebar 65-70%) */}
+              <div 
+                className="lg:flex-[2.2] h-[250px] sm:h-[350px] lg:h-full relative rounded-2xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl bg-[#0d1117]"
+                onClick={() => router.push(`/services/${sliderItems[currentSlide].id}`)}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0"
                   >
-                    {featuredServices[currentSlide].thumbnail ? (
+                    {sliderItems[currentSlide].thumbnail ? (
                       <img 
-                        src={featuredServices[currentSlide].thumbnail} 
-                        alt={featuredServices[currentSlide].title} 
+                        src={sliderItems[currentSlide].thumbnail} 
+                        alt={sliderItems[currentSlide].title} 
                         className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-105" 
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#0d1117] flex items-center justify-center">
-                        <Sparkles className="w-20 h-20 text-white/5" />
+                      <div className="w-full h-full flex items-center justify-center text-white/5">
+                        <Sparkles size={64} />
                       </div>
                     )}
                     
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent opacity-95" />
+                    {/* Dark Overlay for Text */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-90" />
                     
-                    {/* Hero Content */}
-                    <div className="absolute bottom-0 left-0 w-full p-8 md:p-12 flex flex-col justify-end h-full">
-                      <div className="flex flex-wrap items-center gap-3 mb-4">
-                        <span className="px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest backdrop-blur-md flex items-center gap-1.5">
-                          <Zap className="w-3 h-3 fill-primary" /> Sorotan
-                        </span>
-                        <span className="text-gray-300 text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-md bg-white/10 backdrop-blur-sm border border-white/5">
-                          {categories.find(c => c.id === featuredServices[currentSlide].category)?.label || featuredServices[currentSlide].category}
+                    <div className="absolute bottom-0 left-0 w-full p-6 md:p-10">
+                      <div className="flex items-center gap-2 mb-3">
+                        {sliderItems[currentSlide].isFlashSale && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded backdrop-blur-md flex items-center gap-1">
+                            <Zap size={10} className="fill-white" /> Flash Sale
+                          </span>
+                        )}
+                        <span className="bg-primary/90 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded backdrop-blur-md">
+                          {categories.find(c => c.id === sliderItems[currentSlide].category)?.label || sliderItems[currentSlide].category}
                         </span>
                       </div>
-                      <h2 className="text-white text-2xl md:text-4xl lg:text-5xl font-bold font-heading line-clamp-2 leading-tight mb-4 max-w-4xl group-hover:text-primary transition-colors">
-                        {featuredServices[currentSlide].title}
+                      <h2 className="text-2xl md:text-4xl font-heading font-bold text-white leading-tight mb-2 group-hover:text-primary transition-colors max-w-2xl line-clamp-2">
+                        {sliderItems[currentSlide].title}
                       </h2>
-                      <p className="text-gray-300 text-sm md:text-base line-clamp-2 max-w-2xl font-light">
-                        {featuredServices[currentSlide].shortDesc}
-                      </p>
+                      <div className="flex items-center gap-4 mt-4">
+                         <div className="flex flex-col">
+                           <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono">Spesial</span>
+                           <span className="text-xl md:text-2xl font-bold font-mono text-white">{sliderItems[currentSlide].price}</span>
+                         </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Slider Nav Buttons (Kiri Kanan) - Tampil Saat Hover */}
+                <button 
+                  onClick={handlePrevSlide}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-primary text-white flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 border border-white/20"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button 
+                  onClick={handleNextSlide}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-primary text-white flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 border border-white/20"
+                >
+                  <ChevronRight size={24} />
+                </button>
+
+                {/* Slider Dots */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                  {sliderItems.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => { e.stopPropagation(); setCurrentSlide(idx); }}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-300",
+                        idx === currentSlide ? "bg-white w-6" : "bg-white/40 w-1.5 hover:bg-white/80"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* KANAN: 2 Static Promo Banners (Lebar 30-35%) */}
+              <div className="lg:flex-1 hidden md:flex flex-row lg:flex-col gap-4 h-full">
+                {staticItems.map((item) => (
+                  <div 
+                    key={item.id}
+                    onClick={() => router.push(`/services/${item.id}`)}
+                    className="flex-1 relative rounded-2xl overflow-hidden group cursor-pointer border border-white/10 shadow-lg bg-[#0d1117]"
+                  >
+                    {item.thumbnail ? (
+                      <img src={item.thumbnail} alt={item.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/5">
+                        <Sparkles size={48} />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
+                    
+                    <div className="absolute inset-0 p-5 flex flex-col justify-end">
+                       <h3 className="text-lg font-bold font-heading text-white line-clamp-2 leading-tight mb-2 group-hover:text-primary transition-colors">
+                         {item.title}
+                       </h3>
+                       <div className="flex justify-between items-end">
+                         <span className="text-base font-bold font-mono text-purple-400">{item.price}</span>
+                         <span className="text-[10px] text-gray-400 bg-white/10 px-2 py-1 rounded backdrop-blur-md uppercase font-mono">Promo</span>
+                       </div>
                     </div>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Slider Pagination Dots */}
-              <div className="absolute bottom-8 right-8 flex gap-2 z-20">
-                {featuredServices.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={(e) => { e.stopPropagation(); setCurrentSlide(idx); }}
-                    className={cn(
-                      "h-1.5 rounded-full transition-all duration-500",
-                      idx === currentSlide ? "bg-primary w-8" : "bg-white/30 w-2 hover:bg-white/60"
-                    )}
-                    aria-label={`Go to slide ${idx + 1}`}
-                  />
                 ))}
+                
+                {/* Fallback jika item statis kurang dari 2 */}
+                {staticItems.length < 2 && (
+                  <div className="flex-1 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/10 border border-primary/20 flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
+                     <Star className="w-10 h-10 text-primary mb-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
+                     <h3 className="text-white font-bold mb-1">Mulai Karir Digitalmu</h3>
+                     <p className="text-xs text-gray-400">Jelajahi seluruh layanan premium kami.</p>
+                  </div>
+                )}
               </div>
+
             </div>
           ) : null}
         </div>
 
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
-          {/* --- 2. CONTROLS BAR (Search, Sort & Categories) --- */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-xl mb-12 flex flex-col gap-5 shadow-2xl relative z-20"
-          >
-            {/* Top Row: Search & Sort */}
-            <div className="flex flex-col md:flex-row gap-4 items-center w-full">
-              {/* Search Bar (flex-1 agar mengisi ruang kosong) */}
-              <div className="relative w-full flex-1 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Cari layanan, source code, atau template..." 
-                  className="w-full pl-11 pr-10 py-3 bg-[#050505]/50 border border-white/5 rounded-xl focus:outline-none focus:border-primary/50 transition-all text-sm text-white placeholder:text-gray-600"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white p-1.5 hover:bg-white/10 rounded-full transition-colors"
+
+        {/* =========================================
+            2. CATEGORY MENU (Shopee-Style Round Icons)
+        ========================================= */}
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12">
+          <div className="w-full bg-[#050505] border border-white/5 rounded-3xl p-6 md:p-8 shadow-xl">
+            <div className="flex gap-4 md:gap-8 overflow-x-auto pb-4 pt-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className="flex flex-col items-center gap-3 shrink-0 group min-w-[70px] md:min-w-[90px]"
                   >
-                    <X size={14} />
+                    <div className={cn(
+                      "w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-white transition-all duration-300 relative",
+                      isActive 
+                        ? "shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-110" 
+                        : "opacity-80 group-hover:scale-105 group-hover:opacity-100"
+                    )}>
+                      {/* Gradient Background */}
+                      <div className={cn(
+                        "absolute inset-0 rounded-2xl bg-gradient-to-br opacity-80 group-hover:opacity-100 transition-opacity",
+                        cat.color
+                      )} />
+                      {/* Icon */}
+                      <div className="relative z-10">
+                        {cat.icon}
+                      </div>
+                      
+                      {/* Active Ring */}
+                      {isActive && (
+                        <div className="absolute -inset-1.5 rounded-3xl border-2 border-primary/50" />
+                      )}
+                    </div>
+                    <span className={cn(
+                      "text-xs md:text-sm font-medium whitespace-nowrap transition-colors",
+                      isActive ? "text-primary font-bold" : "text-gray-400 group-hover:text-gray-200"
+                    )}>
+                      {cat.label}
+                    </span>
                   </button>
-                )}
-              </div>
-
-              {/* Sort Button (shrink-0 agar ukurannya solid dan menempel) */}
-              <div className="flex items-center shrink-0 w-full md:w-auto">
-                <button 
-                  onClick={() => setSortBy(prev => prev === "newest" ? "popular" : "newest")}
-                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#050505]/50 border border-white/5 hover:border-white/20 hover:bg-white/5 transition-all text-sm text-gray-300 font-medium w-full md:w-auto"
-                >
-                  <ArrowDownUp className="w-4 h-4 text-gray-500" />
-                  {sortBy === "newest" ? "Terbaru" : "Terpopuler"}
-                </button>
-              </div>
+                );
+              })}
             </div>
+          </div>
+        </div>
 
-            {/* Bottom Row: Category Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full">
-              <Filter className="w-4 h-4 text-gray-600 shrink-0 mr-2" />
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={cn(
-                    "px-5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-all border",
-                    activeCategory === cat.id 
-                      ? "bg-primary text-white border-primary shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)]" 
-                      : "bg-transparent border-white/5 text-gray-500 hover:bg-white/5 hover:text-gray-300"
-                  )}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
+          
 
-          {/* --- FLASH SALE SECTION --- */}
+
+          {/* =========================================
+              4. FLASH SALE SECTION
+          ========================================= */}
           <AnimatePresence>
             {!loading && flashSaleItems.length > 0 && activeCategory === "all" && !searchQuery && (
               <motion.div 
@@ -238,55 +313,118 @@ export default function ServicesPage() {
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-4 mb-6 px-2">
+                <div className="w-full h-px bg-white/10 mb-8" />
+                <div className="flex items-center gap-4 mb-6">
                   <div className="p-2.5 bg-red-500/20 rounded-xl text-red-500 relative flex items-center justify-center">
                     <div className="absolute inset-0 bg-red-500/30 rounded-xl blur-md animate-pulse" />
                     <Zap size={24} fill="currentColor" className="relative z-10" />
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold font-heading text-white tracking-tight">Flash Sale Terbatas</h2>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Diskon gila-gilaan. Segera <b>checkout</b> sebelum waktu habis!
-                    </p>
+                  <div className="flex items-baseline gap-4">
+                    <h2 className="text-2xl font-bold font-heading text-red-500 tracking-tight italic">F L A S H  <span className="text-white ml-2">S A L E</span></h2>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6 rounded-[2rem] bg-[#0a0a0a] border border-red-500/20 relative shadow-2xl">
-                  {/* Background accent */}
-                  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-500/5 blur-[100px] rounded-full pointer-events-none" />
-                  
+                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {flashSaleItems.map((item) => (
-                    <ServiceMarketCard 
-                      key={item.id} 
-                      item={item} 
-                      onClick={() => router.push(`/services/${item.id}`)}
-                      isFlashSaleView={true}
-                    />
+                    <div key={item.id} className="min-w-[280px] md:min-w-[320px] max-w-[350px]">
+                      <ServiceMarketCard 
+                        item={item} 
+                        onClick={() => router.push(`/services/${item.id}`)}
+                        isFlashSaleView={true}
+                      />
+                    </div>
                   ))}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* --- PRODUCT GRID --- */}
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-6 px-2">
-              <h2 className="text-xl font-bold font-heading text-white tracking-tight">
-                {activeCategory === "all" && !searchQuery 
-                  ? "Semua Layanan" 
-                  : searchQuery 
-                    ? "Hasil Pencarian" 
-                    : categories.find(c => c.id === activeCategory)?.label}
-              </h2>
-              <span className="text-sm font-mono text-gray-500 bg-white/5 px-3 py-1 rounded-lg border border-white/5">
-                {filteredServices.length} Item
-              </span>
-            </div>
+          {/* =========================================
+              4B. RECOMMENDED SECTION
+          ========================================= */}
+          <AnimatePresence>
+            {!loading && recommendedItems.length > 0 && activeCategory === "all" && !searchQuery && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: "auto", marginBottom: 64 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="w-full h-px bg-white/10 mb-8" />
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="p-2.5 bg-yellow-500/20 rounded-xl text-yellow-500 relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-yellow-500/10 rounded-xl blur-md" />
+                    <Star size={24} fill="currentColor" className="relative z-10" />
+                  </div>
+                  <div className="flex items-baseline gap-4">
+                    <h2 className="text-2xl font-bold font-heading text-yellow-500 tracking-tight italic">REKOMENDASI</h2>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {recommendedItems.slice(0, 8).map((item) => (
+                    <div key={item.id} className="h-full">
+                      <ServiceMarketCard 
+                        item={item} 
+                        onClick={() => router.push(`/services/${item.id}`)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* =========================================
+              5. PRODUCT GRID
+          ========================================= */}
+          <div className="w-full">
+            <div className="w-full h-px bg-white/10 mb-8" />
+            
+            {/* --- FILTER & SORT CONTROLS --- */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-8 pb-6 border-b border-white/10">
+              <h2 className="text-xl md:text-2xl font-bold font-heading text-white tracking-tight flex-1 flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg text-blue-500 inline-flex">
+                    <Filter size={18} fill="currentColor" />
+                  </div>
+                  {activeCategory === "all" && !searchQuery 
+                    ? "Eksplorasi Jasa" 
+                    : searchQuery 
+                      ? "Hasil Pencarian" 
+                      : categories.find(c => c.id === activeCategory)?.label}
+              </h2>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="relative group flex-1 sm:w-64">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 group-focus-within:text-white transition-colors" />
+                  <input 
+                    type="text" 
+                    placeholder="Cari jasa..." 
+                    className="w-full pl-11 pr-10 py-2.5 bg-[#0a0a0a] border border-white/10 rounded-xl focus:outline-none focus:border-primary/50 transition-all text-sm text-white placeholder:text-gray-600"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white p-1 rounded-full transition-colors">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => setSortBy(prev => prev === "newest" ? "popular" : "newest")}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/10 hover:border-white/30 transition-all text-sm text-gray-300 font-medium shrink-0"
+                >
+                  <ArrowDownUp className="w-4 h-4 text-gray-500" />
+                  {sortBy === "newest" ? "Terbaru" : "Terpopuler"}
+                </button>
+              </div>
+            </div>
+            
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                  <div key={i} className="h-[380px] bg-white/5 rounded-3xl animate-pulse border border-white/5" />
+                  <div key={i} className="h-[300px] md:h-[380px] bg-white/5 rounded-2xl animate-pulse border border-white/5" />
                 ))}
               </div>
             ) : filteredServices.length === 0 ? (
@@ -297,21 +435,15 @@ export default function ServicesPage() {
                 className="text-center py-24 border border-dashed border-white/10 rounded-3xl bg-[#0a0a0a]/50 backdrop-blur-sm w-full"
               >
                 <Filter className="w-12 h-12 mx-auto text-gray-600 mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">Layanan Tidak Ditemukan</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Pencarian Tidak Ditemukan</h3>
                 <p className="text-gray-400 max-w-sm mx-auto text-sm">
-                  Coba gunakan kata kunci lain atau ubah filter kategori Anda.
+                  Ubah kata kunci pencarian atau kategori untuk melihat jasa lainnya.
                 </p>
-                <button 
-                  onClick={() => {setSearchQuery(""); setActiveCategory("all");}}
-                  className="mt-6 px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all"
-                >
-                  Reset Semua Filter
-                </button>
               </motion.div>
             ) : (
               <motion.div 
                 layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
               >
                 <AnimatePresence mode="popLayout">
                   {filteredServices.map((item) => (
@@ -363,9 +495,8 @@ function ProductCountdown({ targetDateStr }: { targetDateStr: string }) {
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-      // Format string
       if (days > 0) {
-        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+        setTimeLeft(`${days}h ${hours}j`); // Shorter format for small cards
       } else {
         const h = hours < 10 ? `0${hours}` : hours;
         const m = minutes < 10 ? `0${minutes}` : minutes;
@@ -382,147 +513,111 @@ function ProductCountdown({ targetDateStr }: { targetDateStr: string }) {
   if (!timeLeft || timeLeft === "EXPIRED") return null;
 
   return (
-    <div className="absolute bottom-3 left-3 bg-red-600/90 text-white text-xs font-bold px-3 py-1.5 rounded-lg backdrop-blur-md shadow-lg flex items-center justify-center gap-1.5 z-20 border border-red-400/30">
-        <Timer size={14} className="animate-pulse" />
+    <div className="absolute bottom-2 left-2 right-2 bg-red-600 text-white text-[10px] md:text-xs font-bold px-2 py-1.5 rounded-lg shadow-lg flex items-center justify-center gap-1.5 z-20">
+        <Timer size={12} className="animate-pulse" />
         <span className="font-mono tracking-widest">{timeLeft}</span>
     </div>
   );
 }
 
-// --- SUB-COMPONENT: PREMIUM MARKET CARD ---
+// --- E-COMMERCE PREMIUM MARKET CARD (SHOPEE STYLE) ---
 function ServiceMarketCard({ item, onClick, isFlashSaleView = false }: { item: ServicePackage, onClick: () => void, isFlashSaleView?: boolean }) {
   const salesCount = item.sales ?? 0;
   const ratingValue = item.rating ?? 0;
   
-  // Logic Diskon
-  const hasDiscount = Boolean(item.originalPrice && item.originalPrice !== "");
+  const displayPrice = (isFlashSaleView && item.flashSalePrice) ? item.flashSalePrice : item.price;
+  const displayOriginalPrice = (isFlashSaleView && item.flashSalePrice) ? (item.originalPrice || item.price) : item.originalPrice;
+  
+  const hasDiscount = Boolean(displayOriginalPrice && displayOriginalPrice !== "");
   const flashSaleEndDate = (item as any).flashSaleEndDate;
 
   return (
     <div 
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col rounded-3xl overflow-hidden transition-all duration-500 cursor-pointer h-full bg-[#0a0a0a] border",
+        "group relative flex flex-col bg-[#050505] rounded-xl md:rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer h-full border hover:-translate-y-1 hover:shadow-2xl",
         isFlashSaleView 
-          ? "border-red-500/20 hover:border-red-500/50 hover:shadow-[0_0_30px_-10px_rgba(239,68,68,0.2)]"
-          : "border-white/10 hover:border-primary/50 hover:shadow-[0_0_30px_-10px_rgba(99,102,241,0.15)] hover:bg-[#111]"
+          ? "border-red-500/30 hover:border-red-400"
+          : "border-white/10 hover:border-primary/50"
       )}
     >
-      {/* 1. Image Thumbnail Area */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#0d1117] border-b border-white/5 shrink-0">
+      {/* Image Area */}
+      <div className="relative aspect-square md:aspect-[4/3] w-full overflow-hidden bg-[#0d1117] shrink-0">
         {item.thumbnail ? (
           <img 
             src={item.thumbnail} 
             alt={item.title} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
           />
         ) : (
           <div className="flex items-center justify-center h-full text-white/5">
-            <Sparkles size={64}/>
+            <Sparkles size={48}/>
           </div>
         )}
         
-        {/* Soft Gradient Overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-60" />
-        
-        {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10 pointer-events-none">
-          <div className="flex flex-col gap-2">
-            {item.recommended && !isFlashSaleView && (
-              <span className="bg-primary/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-sm shadow-lg w-fit flex items-center gap-1 uppercase tracking-wider border border-white/10">
-                <Star size={10} className="fill-white" /> Rekomendasi
-              </span>
-            )}
-            {isFlashSaleView && (
-              <span className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md backdrop-blur-sm shadow-lg w-fit animate-pulse flex items-center gap-1 uppercase tracking-wider border border-white/10">
-                <Zap size={10} className="fill-white" /> Flash Sale
-              </span>
-            )}
-          </div>
-
-          {/* Discount Ribbon / Badge */}
-          {hasDiscount && (
-            <div className={cn(
-              "text-white text-xs font-bold px-2.5 py-1.5 rounded-md shadow-lg flex flex-col items-center leading-none border border-white/10",
-              isFlashSaleView ? "bg-red-500/90 backdrop-blur-md" : "bg-orange-500/90 backdrop-blur-md"
-            )}>
-              <span className="text-sm">{item.discountValue}%</span>
-              <span className="text-[8px] uppercase tracking-widest mt-0.5">OFF</span>
-            </div>
+        {/* Shopee-style Product Badge */}
+        <div className="absolute top-0 left-0">
+          {item.recommended && !isFlashSaleView && (
+             <div className="bg-primary text-white text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-lg uppercase tracking-wider flex items-center gap-1">
+               <Star size={10} className="fill-white" /> Pilihan
+             </div>
+          )}
+          {isFlashSaleView && (
+             <div className="bg-red-500 text-white text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-lg uppercase tracking-wider flex items-center gap-1">
+               <Zap size={10} className="fill-white" /> Diskon
+             </div>
           )}
         </div>
 
-        {/* Timer UI inside Image */}
+        {/* Shopee-style Discount Ribbon (Top Right) */}
+        {hasDiscount && (
+          <div className="absolute top-0 right-0 bg-[#FFD100] text-[#ee4d2d] px-1.5 py-1 text-center rounded-bl-lg">
+             <div className="text-[10px] md:text-[11px] font-bold leading-none py-0.5">{item.discountValue}</div>
+             <div className="text-[7px] md:text-[8px] font-bold uppercase leading-none mt-0.5">OFF</div>
+          </div>
+        )}
+
         {isFlashSaleView && flashSaleEndDate && (
            <ProductCountdown targetDateStr={flashSaleEndDate} />
         )}
       </div>
 
-      {/* 2. Content Details */}
-      <div className="p-5 md:p-6 flex flex-col flex-grow relative z-10">
+      {/* Content Area */}
+      <div className="p-3 md:p-4 flex flex-col flex-grow relative z-10 bg-[#050505]">
         
-        {/* Category & Stats */}
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-            {categories.find(c => c.id === item.category)?.label || item.category}
-          </span>
-          <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
-            <Star size={10} className="fill-yellow-400" /> {ratingValue > 0 ? ratingValue : "New"}
-          </div>
-        </div>
-
         {/* Title */}
-        <h3 className="font-heading font-bold text-lg text-white mb-2 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="font-heading font-medium text-sm md:text-base text-gray-200 mb-1 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {item.title}
         </h3>
 
-        {/* Short Desc */}
-        <p className="text-sm text-gray-400 line-clamp-2 mb-6 leading-relaxed font-light flex-grow">
-          {item.shortDesc || "Layanan premium siap pakai untuk meningkatkan bisnis Anda."}
-        </p>
-
-        {/* Price & Action Section */}
-        <div className="mt-auto pt-4 border-t border-white/10 flex items-end justify-between">
-          <div className="flex flex-col">
-            {hasDiscount ? (
-              <>
-                <span className="text-xs text-gray-500 line-through decoration-red-500/50 mb-0.5">
-                  {item.originalPrice}
-                </span>
-                <span className={cn("text-xl font-bold font-mono tracking-tight", isFlashSaleView ? "text-red-400" : "text-white")}>
-                  {item.price}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Mulai dari</span>
-                <span className="text-xl font-bold font-mono text-white tracking-tight">{item.price}</span>
-              </>
-            )}
+        {/* Price Section */}
+        <div className="mt-auto pt-2 flex flex-col">
+          {hasDiscount ? (
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] md:text-xs text-gray-500 line-through">{displayOriginalPrice}</span>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              {item.packages && item.packages.length > 0 && (
+                <span className="text-[10px] text-gray-500 font-medium">Mulai dari</span>
+              )}
+              <span className={cn("text-base md:text-lg font-bold font-mono tracking-tight leading-none", isFlashSaleView ? "text-red-500" : "text-primary")}>
+                {displayPrice}
+              </span>
+            </div>
           </div>
-
-          <button 
-            className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
-              isFlashSaleView 
-                ? "bg-red-500 text-white group-hover:shadow-[0_0_20px_-5px_rgba(239,68,68,0.5)]"
-                : "bg-white/5 text-gray-300 border border-white/10 group-hover:bg-primary group-hover:border-primary group-hover:text-white"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick(); // Sekarang cukup memanggil fungsi onClick dari props!
-            }}
-          >
-            {isFlashSaleView ? <ShoppingCart size={18} /> : <ArrowRight size={18} className="group-hover:-rotate-45 transition-transform" />}
-          </button>
         </div>
 
-        {/* Footer info (Sales) */}
-        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-gray-500 font-mono uppercase tracking-widest">
-          <CheckCircle2 size={12} className={salesCount > 0 ? "text-emerald-500" : "text-gray-600"} />
-          <span>{salesCount > 0 ? `${salesCount} Lisensi Terjual` : "Rilis Baru"}</span>
+        {/* Ratings & Sales (Shopee Bottom Style) */}
+        <div className="mt-2 flex items-center justify-between text-[9px] md:text-[10px] text-gray-400">
+           <div className="flex items-center gap-1">
+             <Star size={10} className="text-yellow-400 fill-yellow-400" /> 
+             <span>{ratingValue > 0 ? ratingValue : "Baru"}</span>
+           </div>
+           <span>{salesCount > 0 ? `${salesCount} Terjual` : ""}</span>
         </div>
-
+        
       </div>
     </div>
   );

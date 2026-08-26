@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc, query, orderBy, deleteDoc, setDoc, addDoc, where, limit } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, orderBy, deleteDoc, setDoc, addDoc, where, limit, increment, Timestamp } from "firebase/firestore";
 
 export interface BlogPost {
   id: string;
@@ -11,6 +11,16 @@ export interface BlogPost {
   tags: string[];
   publishedAt: string; // ISO Date String
   isPublished: boolean;
+  likesCount?: number;
+  commentsCount?: number;
+}
+
+export interface BlogComment {
+  id: string;
+  postId: string; // ID of the blog post
+  authorName: string;
+  content: string;
+  createdAt: string; // ISO String
 }
 
 const COLLECTION_NAME = "posts";
@@ -96,4 +106,58 @@ export async function savePost(data: Partial<BlogPost>, id?: string) {
 // Delete Post
 export async function deletePost(id: string) {
   await deleteDoc(doc(db, COLLECTION_NAME, id));
+}
+
+// ----------------------------------------------------
+// ENGAGEMENT FEATURES (LIKES & COMMENTS)
+// ----------------------------------------------------
+
+export async function incrementLike(id: string) {
+  try {
+    const docRef = doc(db, COLLECTION_NAME, id);
+    await setDoc(docRef, { likesCount: increment(1) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error incrementing like:", error);
+    throw error;
+  }
+}
+
+export async function addComment(postId: string, authorName: string, content: string) {
+  try {
+    const commentsRef = collection(db, "blog_comments");
+    const newComment = {
+      postId,
+      authorName: authorName || "Anonymous",
+      content,
+      createdAt: new Date().toISOString()
+    };
+    await addDoc(commentsRef, newComment);
+    
+    // Update comment count on post
+    const postRef = doc(db, COLLECTION_NAME, postId);
+    await setDoc(postRef, { commentsCount: increment(1) }, { merge: true });
+    
+    return true;
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    throw error;
+  }
+}
+
+export async function getComments(postId: string): Promise<BlogComment[]> {
+  try {
+    const commentsRef = collection(db, "blog_comments");
+    const q = query(
+      commentsRef, 
+      where("postId", "==", postId)
+    );
+    const snapshot = await getDocs(q);
+    const comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogComment));
+    // Sort in memory to avoid needing a composite index in Firestore
+    return comments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    return [];
+  }
 }

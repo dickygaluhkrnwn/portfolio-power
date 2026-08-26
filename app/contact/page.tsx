@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence, useScroll, useTransform, Variants } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
 import { getAllSocials, SocialLink } from "@/lib/socials-service";
 import { 
   Github, Linkedin, Twitter, Facebook, Instagram, Youtube, 
   Music, PenTool, Globe, Mail, ArrowUpRight, Code,
   CheckCircle2, BookOpen, Users, MapPin, Building, Calendar, 
-  Send, Loader2, Briefcase
+  Send, Loader2, Briefcase, Sparkles
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // --- INTERFACES ---
 interface GithubData {
@@ -44,10 +45,45 @@ const getIcon = (platform: string, className?: string) => {
   return <Globe {...props} />;
 };
 
+// Animasi Config
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const popItem: Variants = {
+  hidden: { opacity: 0, scale: 0.8, y: 20 },
+  show: { 
+    opacity: 1, 
+    scale: 1, 
+    y: 0,
+    transition: { type: "spring", stiffness: 200, damping: 15 }
+  }
+};
+
+const slideUp: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: { type: "spring", stiffness: 100, damping: 20 }
+  }
+};
+
 export default function ContactPage() {
   const [socials, setSocials] = useState<SocialLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [githubData, setGithubData] = useState<GithubData | null>(null);
+  
+  // Parallax ref
+  const { scrollYProgress } = useScroll();
+  const yParallax = useTransform(scrollYProgress, [0, 1], [0, -100]);
   
   // Form States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,7 +96,6 @@ export default function ContactPage() {
   useEffect(() => {
     async function loadData() {
       const socialsData = await getAllSocials();
-      // Hanya tampilkan yang status active-nya true di halaman publik
       setSocials(socialsData.filter(s => s.active !== false));
       setLoading(false);
 
@@ -81,7 +116,7 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulasi pengiriman form (Nanti bisa lu ganti dengan integrasi EmailJS / API beneran)
+    // Simulasi pengiriman form (Nanti bisa diganti API)
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     setIsSubmitting(false);
@@ -91,7 +126,6 @@ export default function ContactPage() {
     setTimeout(() => setIsSuccess(false), 5000);
   };
 
-  // Mengkategorikan data untuk Grid Layout
   const groupedSocials = [
     { 
       title: "Professional", 
@@ -115,105 +149,126 @@ export default function ContactPage() {
     : '';
 
   return (
-    <main className="min-h-screen bg-background text-foreground relative overflow-x-hidden selection:bg-primary/30 selection:text-white pb-24">
+    <main className="min-h-screen bg-background text-foreground relative overflow-hidden selection:bg-primary/30 selection:text-white pb-24">
       <Navbar />
 
       {/* --- BACKGROUND FX --- */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 rounded-full blur-[150px] mix-blend-screen" />
+        <motion.div 
+          style={{ y: yParallax }}
+          className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_10%,#000_70%,transparent_100%)]" 
+        />
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/20 rounded-full blur-[150px] mix-blend-screen" 
+        />
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 100, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[20%] -right-40 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px] mix-blend-screen" 
+        />
       </div>
 
-      {/* Diubah menjadi max-w-7xl agar seragam dengan Projects & Services */}
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 pt-32 relative z-10 flex flex-col gap-24">
         
         {/* --- 1. HERO: GITHUB LIVE BANNER --- */}
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial="hidden"
+          animate="show"
+          variants={staggerContainer}
           className="w-full relative"
         >
           {/* Badge Absolute di atas banner */}
-          <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-md shadow-xl text-xs font-mono text-gray-300">
-            <span className="relative flex h-2 w-2">
+          <motion.div 
+            variants={popItem}
+            className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-black/80 border border-white/20 backdrop-blur-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] text-xs font-mono text-gray-200"
+          >
+            <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
             </span>
             LIVE DEVELOPER METRICS
-          </div>
+          </motion.div>
 
           {githubData ? (
-            <a 
+            <motion.a 
+              variants={slideUp}
+              whileHover={{ y: -5, scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               href={githubData.html_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="group block relative rounded-3xl bg-[#0a0a0a] backdrop-blur-xl border border-white/10 overflow-hidden transition-all duration-500 hover:border-primary/50 hover:shadow-[0_0_50px_-15px_rgba(99,102,241,0.3)] shadow-2xl"
+              className="group block relative rounded-3xl bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/10 overflow-hidden transition-all duration-500 hover:border-primary/50 hover:shadow-[0_0_80px_-20px_rgba(99,102,241,0.4)] shadow-2xl"
             >
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none mix-blend-overlay" />
-              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-primary/10 transition-colors duration-500" />
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-primary/10 to-transparent rounded-full blur-[80px] pointer-events-none group-hover:from-primary/20 transition-colors duration-700" />
               
               <div className="p-8 md:p-12 relative z-10">
                 <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
                   
                   {/* Floating Avatar */}
-                  <div className="relative shrink-0 group-hover:-translate-y-2 transition-transform duration-500">
-                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-[#0d1117] relative z-10 p-1">
-                      <img src={githubData.avatar_url} alt={githubData.login} className="w-full h-full object-cover rounded-[1.75rem] group-hover:scale-105 transition-transform duration-500" />
+                  <motion.div 
+                    variants={popItem}
+                    className="relative shrink-0"
+                  >
+                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-[#0d1117] relative z-10 p-1 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all duration-500">
+                      <img src={githubData.avatar_url} alt={githubData.login} className="w-full h-full object-cover rounded-[1.75rem] group-hover:scale-110 group-hover:rotate-3 transition-transform duration-700" />
                     </div>
                     {/* Glow behind avatar */}
-                    <div className="absolute inset-0 bg-primary/40 blur-2xl rounded-full -z-10 group-hover:bg-primary/60 transition-colors duration-500" />
-                  </div>
+                    <div className="absolute inset-0 bg-primary/40 blur-3xl rounded-full -z-10 group-hover:bg-primary/60 animate-pulse transition-colors duration-500" />
+                  </motion.div>
 
                   {/* Core Identity */}
                   <div className="flex-1 mt-2 md:mt-0">
-                    <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 group-hover:text-primary transition-colors duration-300 font-heading tracking-tight">
+                    <motion.h1 variants={slideUp} className="text-3xl md:text-5xl font-bold text-white mb-2 group-hover:text-primary transition-colors duration-300 font-heading tracking-tight flex items-center justify-center md:justify-start gap-3">
                       {githubData.name || githubData.login}
-                    </h1>
-                    <p className="text-primary/80 font-mono text-sm md:text-base mb-6">@{githubData.login}</p>
+                      <Sparkles className="w-6 h-6 text-yellow-400 opacity-0 group-hover:opacity-100 group-hover:animate-spin-slow transition-opacity" />
+                    </motion.h1>
+                    <motion.p variants={slideUp} className="text-primary/80 font-mono text-sm md:text-base mb-6 flex items-center justify-center md:justify-start gap-2">
+                      <Github className="w-4 h-4" /> @{githubData.login}
+                    </motion.p>
                     
                     {githubData.bio && (
-                      <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-3xl mb-8 font-light">
+                      <motion.p variants={slideUp} className="text-gray-400 text-base md:text-lg leading-relaxed max-w-3xl mb-8 font-light">
                         {githubData.bio}
-                      </p>
+                      </motion.p>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-3 text-sm text-gray-500 font-medium">
+                    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-3 text-sm text-gray-500 font-medium">
                       {githubData.location && (
-                        <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-600" /> {githubData.location}</div>
+                        <motion.div variants={popItem} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full"><MapPin className="w-4 h-4 text-emerald-400" /> {githubData.location}</motion.div>
                       )}
                       {githubData.company && (
-                        <div className="flex items-center gap-2"><Building className="w-4 h-4 text-gray-600" /> {githubData.company}</div>
+                        <motion.div variants={popItem} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full"><Building className="w-4 h-4 text-blue-400" /> {githubData.company}</motion.div>
                       )}
-                      <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-600" /> Joined {joinDate}</div>
-                    </div>
+                      <motion.div variants={popItem} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full"><Calendar className="w-4 h-4 text-purple-400" /> Joined {joinDate}</motion.div>
+                    </motion.div>
                   </div>
                 </div>
 
                 {/* Divider */}
-                <div className="w-full h-px bg-white/5 my-8 md:my-10" />
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-8 md:my-10" />
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="flex flex-col items-center md:items-start p-4 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <div className="text-3xl font-bold text-white mb-1 font-heading">{githubData.public_repos}</div>
-                    <div className="text-xs text-gray-500 font-mono tracking-wider flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5"/> REPOSITORIES</div>
-                  </div>
-                  <div className="flex flex-col items-center md:items-start p-4 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <div className="text-3xl font-bold text-white mb-1 font-heading">{githubData.followers}</div>
-                    <div className="text-xs text-gray-500 font-mono tracking-wider flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> FOLLOWERS</div>
-                  </div>
-                  <div className="flex flex-col items-center md:items-start p-4 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <div className="text-3xl font-bold text-white mb-1 font-heading">{githubData.following}</div>
-                    <div className="text-xs text-gray-500 font-mono tracking-wider flex items-center gap-1.5"><ArrowUpRight className="w-3.5 h-3.5"/> FOLLOWING</div>
-                  </div>
-                  <div className="flex flex-col items-center md:items-start p-4 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:bg-white/[0.04] transition-colors">
-                    <div className="text-3xl font-bold text-white mb-1 font-heading">{githubData.public_gists}</div>
-                    <div className="text-xs text-gray-500 font-mono tracking-wider flex items-center gap-1.5"><Code className="w-3.5 h-3.5"/> GISTS</div>
-                  </div>
-                </div>
+                <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                  {[
+                    { label: "REPOSITORIES", value: githubData.public_repos, icon: <BookOpen className="w-4 h-4 text-blue-400"/> },
+                    { label: "FOLLOWERS", value: githubData.followers, icon: <Users className="w-4 h-4 text-emerald-400"/> },
+                    { label: "FOLLOWING", value: githubData.following, icon: <ArrowUpRight className="w-4 h-4 text-purple-400"/> },
+                    { label: "GISTS", value: githubData.public_gists, icon: <Code className="w-4 h-4 text-orange-400"/> },
+                  ].map((stat, i) => (
+                    <motion.div key={i} variants={popItem} whileHover={{ y: -5 }} className="flex flex-col items-center md:items-start p-5 rounded-2xl bg-gradient-to-br from-white/[0.04] to-transparent border border-white/5 group-hover:border-white/10 group-hover:bg-white/[0.06] transition-all relative overflow-hidden">
+                      <div className="absolute -bottom-4 -right-4 opacity-10 group-hover:opacity-20 transition-opacity scale-150 text-white">
+                        {stat.icon}
+                      </div>
+                      <div className="text-3xl font-bold text-white mb-2 font-heading tracking-tight drop-shadow-md">{stat.value}</div>
+                      <div className="text-[10px] text-gray-500 font-mono tracking-widest flex items-center gap-1.5">{stat.icon} {stat.label}</div>
+                    </motion.div>
+                  ))}
+                </motion.div>
               </div>
-            </a>
+            </motion.a>
           ) : (
             // Loading State for Banner
             <div className="w-full h-[400px] bg-white/5 rounded-[2rem] animate-pulse border border-white/10" />
@@ -223,18 +278,19 @@ export default function ContactPage() {
         {/* --- 2. THE DIRECTORY (3-COLUMN GRID CATEGORIZED) --- */}
         <section className="w-full">
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial="hidden"
+            whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
+            variants={staggerContainer}
           >
             <div className="flex items-center justify-between mb-8 px-2">
-              <h2 className="text-2xl md:text-3xl font-bold font-heading text-white tracking-tight">
+              <motion.h2 variants={slideUp} className="text-2xl md:text-4xl font-bold font-heading text-white tracking-tight flex items-center gap-3">
                 Social Directory
-              </h2>
-              <span className="text-sm font-mono text-gray-500 bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+                <div className="h-1 flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4 rounded-full" />
+              </motion.h2>
+              <motion.span variants={popItem} className="text-sm font-mono text-gray-500 bg-white/5 px-4 py-1.5 rounded-full border border-white/10 shadow-inner">
                 {loading ? "..." : socials.length} Hubs
-              </span>
+              </motion.span>
             </div>
             
             {loading ? (
@@ -243,31 +299,39 @@ export default function ContactPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                {groupedSocials.map((group) => (
-                  <div key={group.title} className="flex flex-col bg-[#0a0a0a] rounded-3xl border border-white/10 p-6 shadow-xl">
+                {groupedSocials.map((group, groupIdx) => (
+                  <motion.div 
+                    key={group.title} 
+                    variants={slideUp}
+                    whileHover={{ y: -5 }}
+                    className="flex flex-col bg-gradient-to-b from-[#0a0a0a] to-black rounded-3xl border border-white/10 p-6 shadow-2xl relative overflow-hidden group/card"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl rounded-full pointer-events-none group-hover/card:bg-white/10 transition-colors" />
+                    
                     {/* Category Header */}
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-6 pb-4 border-b border-white/5">
-                      <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-3 mb-6 pb-4 border-b border-white/5 relative z-10">
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 shadow-inner">
                         {group.icon}
                       </div>
-                      <span className="uppercase tracking-widest">{group.title}</span>
+                      <span className="uppercase tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">{group.title}</span>
                     </h3>
 
                     {/* Category Links */}
-                    <div className="flex flex-col gap-3">
+                    <motion.div variants={staggerContainer} initial="hidden" whileInView="show" className="flex flex-col gap-3 relative z-10">
                       {group.items.length === 0 ? (
                         <p className="text-sm text-gray-600 italic text-center py-8">Belum ada tautan.</p>
                       ) : (
                         group.items.map((item) => (
-                          <a 
+                          <motion.a 
+                            variants={popItem}
                             key={item.id}
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 hover:border-white/20 hover:bg-white/[0.05] rounded-2xl transition-all duration-300"
+                            className="group flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 hover:border-white/20 hover:bg-white/[0.06] rounded-2xl transition-all duration-300"
                           >
                             <div className="flex items-center gap-4 min-w-0">
-                              <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-primary group-hover:scale-110 transition-all shrink-0 shadow-inner">
+                              <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-primary group-hover:scale-110 transition-all shrink-0 shadow-inner group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]">
                                 {getIcon(item.platform, "w-4 h-4")}
                               </div>
                               <div className="flex flex-col min-w-0">
@@ -279,12 +343,14 @@ export default function ContactPage() {
                                 </span>
                               </div>
                             </div>
-                            <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-white group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all shrink-0" />
-                          </a>
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                              <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all shrink-0" />
+                            </div>
+                          </motion.a>
                         ))
                       )}
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -294,129 +360,131 @@ export default function ContactPage() {
         {/* --- 3. CONTACT FORM (SPLIT PREMIUM LAYOUT) --- */}
         <section className="w-full mb-10">
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial="hidden"
+            whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
+            variants={staggerContainer}
           >
-            <h2 className="text-2xl md:text-3xl font-bold font-heading text-white tracking-tight px-2 mb-8 text-center md:text-left">
-              Send a Direct Message
-            </h2>
+            <motion.h2 variants={slideUp} className="text-2xl md:text-4xl font-bold font-heading text-white tracking-tight px-2 mb-8 text-center md:text-left flex items-center gap-3">
+              Direct Message
+              <div className="h-1 flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4 rounded-full hidden md:block" />
+            </motion.h2>
 
-            <div className="bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8 md:p-12 transition-colors hover:border-white/20 shadow-2xl relative overflow-hidden">
+            <motion.div variants={slideUp} className="bg-gradient-to-br from-[#0a0a0a] to-[#050505] border border-white/10 rounded-[2.5rem] p-8 md:p-12 transition-colors shadow-2xl relative overflow-hidden group/form">
               {/* Abstract bg in form */}
-              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none translate-x-1/2 -translate-y-1/2 group-hover/form:bg-primary/20 transition-colors duration-1000" />
+              <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none -translate-x-1/2 translate-y-1/2" />
 
               <div className="flex flex-col md:flex-row gap-12 lg:gap-16 relative z-10">
                 
                 {/* Kolom Kiri: Copywriting & Context */}
                 <div className="md:w-5/12 flex flex-col">
-                  <h3 className="font-heading text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
+                  <motion.h3 variants={slideUp} className="font-heading text-4xl md:text-5xl font-bold text-white leading-tight mb-6 tracking-tight">
                     Got an idea? <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-500 to-gray-300">Let's build it.</span>
-                  </h3>
-                  <p className="text-gray-400 text-sm md:text-base leading-relaxed mb-8 font-light">
-                    Saya selalu terbuka untuk mendiskusikan proyek baru, ide kreatif, atau peluang kolaborasi. Pesan Anda akan langsung masuk ke <i className="text-gray-200 font-medium not-italic">inbox</i> pribadi saya.
-                  </p>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">Let's build it.</span>
+                  </motion.h3>
+                  <motion.p variants={slideUp} className="text-gray-400 text-sm md:text-base leading-relaxed mb-8 font-light">
+                    Saya selalu terbuka untuk mendiskusikan proyek baru, ide kreatif, atau peluang kolaborasi. Pesan Anda akan langsung masuk ke <i className="text-primary/80 font-medium not-italic">inbox</i> pribadi saya.
+                  </motion.p>
                   
                   {/* Contact Info Detail */}
-                  <div className="mt-auto flex flex-col gap-5 bg-white/5 border border-white/10 p-6 rounded-2xl">
-                    <div className="flex items-center gap-4 text-sm text-gray-300 font-medium">
-                      <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center shrink-0">
-                        <Mail className="w-4 h-4 text-primary" />
+                  <motion.div variants={popItem} className="mt-auto flex flex-col gap-5 bg-white/[0.03] backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-inner">
+                    <div className="flex items-center gap-4 text-sm text-gray-300 font-medium group cursor-pointer hover:text-white transition-colors">
+                      <div className="w-12 h-12 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/30 transition-all shadow-inner">
+                        <Mail className="w-5 h-5 text-primary" />
                       </div>
                       <span className="truncate">{myEmail}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-300 font-medium">
-                      <div className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center shrink-0">
-                        <MapPin className="w-4 h-4 text-emerald-400" />
+                    <div className="flex items-center gap-4 text-sm text-gray-300 font-medium group cursor-pointer hover:text-white transition-colors">
+                      <div className="w-12 h-12 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30 transition-all shadow-inner">
+                        <MapPin className="w-5 h-5 text-emerald-400" />
                       </div>
                       <span>Indonesia (IDN)</span>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
 
                 {/* Kolom Kanan: The Form Inputs */}
                 <div className="md:w-7/12">
-                  <form onSubmit={handleFormSubmit} className="flex flex-col gap-6">
+                  <motion.form variants={staggerContainer} initial="hidden" animate="show" onSubmit={handleFormSubmit} className="flex flex-col gap-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label htmlFor="name" className="text-[11px] font-mono text-gray-500 uppercase tracking-widest pl-1">Name</label>
+                      <motion.div variants={slideUp} className="space-y-2 group">
+                        <label htmlFor="name" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1 group-focus-within:text-primary transition-colors">Name</label>
                         <input 
                           id="name"
                           type="text" 
                           required
                           value={formData.name}
                           onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          className="w-full bg-black/20 border border-white/10 px-4 py-3.5 rounded-xl text-white focus:outline-none focus:border-primary focus:bg-white/5 transition-all placeholder:text-gray-700 text-sm"
+                          className="w-full bg-black/40 border border-white/10 px-5 py-4 rounded-2xl text-white focus:outline-none focus:border-primary focus:bg-white/5 focus:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all placeholder:text-gray-700 text-sm shadow-inner"
                           placeholder="John Doe"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="email" className="text-[11px] font-mono text-gray-500 uppercase tracking-widest pl-1">Email</label>
+                      </motion.div>
+                      <motion.div variants={slideUp} className="space-y-2 group">
+                        <label htmlFor="email" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1 group-focus-within:text-primary transition-colors">Email</label>
                         <input 
                           id="email"
                           type="email" 
                           required
                           value={formData.email}
                           onChange={(e) => setFormData({...formData, email: e.target.value})}
-                          className="w-full bg-black/20 border border-white/10 px-4 py-3.5 rounded-xl text-white focus:outline-none focus:border-primary focus:bg-white/5 transition-all placeholder:text-gray-700 text-sm"
+                          className="w-full bg-black/40 border border-white/10 px-5 py-4 rounded-2xl text-white focus:outline-none focus:border-primary focus:bg-white/5 focus:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all placeholder:text-gray-700 text-sm shadow-inner"
                           placeholder="john@example.com"
                         />
-                      </div>
+                      </motion.div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <label htmlFor="message" className="text-[11px] font-mono text-gray-500 uppercase tracking-widest pl-1">Message</label>
+                    <motion.div variants={slideUp} className="space-y-2 group">
+                      <label htmlFor="message" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1 group-focus-within:text-primary transition-colors">Message</label>
                       <textarea 
                         id="message"
                         required
                         rows={5}
                         value={formData.message}
                         onChange={(e) => setFormData({...formData, message: e.target.value})}
-                        className="w-full bg-black/20 border border-white/10 px-4 py-3.5 rounded-xl text-white focus:outline-none focus:border-primary focus:bg-white/5 transition-all resize-none placeholder:text-gray-700 text-sm"
+                        className="w-full bg-black/40 border border-white/10 px-5 py-4 rounded-2xl text-white focus:outline-none focus:border-primary focus:bg-white/5 focus:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all resize-none placeholder:text-gray-700 text-sm shadow-inner"
                         placeholder="Tell me about your project or idea..."
                       />
-                    </div>
+                    </motion.div>
 
-                    <div className="pt-4 flex justify-end">
+                    <motion.div variants={popItem} className="pt-4 flex justify-end">
                       <AnimatePresence mode="wait">
                         {isSuccess ? (
                           <motion.div 
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full md:w-auto bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl py-3.5 px-8 flex items-center justify-center gap-2 text-sm font-bold tracking-wide"
+                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="w-full md:w-auto bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl py-4 px-8 flex items-center justify-center gap-3 text-sm font-bold tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.2)]"
                           >
                             <CheckCircle2 className="w-5 h-5" /> Message Sent Successfully
                           </motion.div>
                         ) : (
                           <motion.button
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-white text-black font-bold py-3.5 px-10 rounded-xl hover:bg-gray-200 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-sm shadow-xl shadow-white/5"
+                            className="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold py-4 px-10 rounded-2xl transition-all disabled:opacity-70 disabled:cursor-not-allowed text-sm shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:shadow-[0_0_40px_rgba(99,102,241,0.6)] uppercase tracking-widest overflow-hidden relative group/btn"
                           >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite]" />
                             {isSubmitting ? (
                               <>
-                                <Loader2 className="w-4 h-4 animate-spin" /> Sending...
+                                <Loader2 className="w-5 h-5 animate-spin" /> Authorizing...
                               </>
                             ) : (
                               <>
-                                Send Message <Send className="w-4 h-4 ml-1" />
+                                Transmit <Send className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
                               </>
                             )}
                           </motion.button>
                         )}
                       </AnimatePresence>
-                    </div>
-                  </form>
+                    </motion.div>
+                  </motion.form>
                 </div>
 
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </section>
 

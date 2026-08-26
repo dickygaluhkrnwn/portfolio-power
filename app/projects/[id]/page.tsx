@@ -2,17 +2,61 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
-import { Button } from "@/components/ui/button";
 import { TechBadge } from "@/components/ui/tech-badge";
-import { Github, ExternalLink, Calendar, Users, Layers, MonitorPlay, Loader2, Sparkles } from "lucide-react";
+import { ProjectCard } from "@/components/ui/project-card";
+import { 
+  Github, ExternalLink, Calendar, Users, Layers, 
+  MonitorPlay, Loader2, Sparkles, ArrowLeft, Target, Lightbulb, Play
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Import tipe dan service
 import { Project } from "@/app/data/projects";
 import { getProjectById, getAllProjects } from "@/lib/projects-service";
-import { ProjectCard } from "@/components/ui/project-card";
+
+// Simple Animated Counter Component for Marketing Metrics
+const AnimatedCounter = ({ value, label }: { value: string, label: string }) => {
+  // Extract number and suffix (e.g. "150%" -> 150, "%")
+  const numMatch = value.match(/[\d\.]+/);
+  const num = numMatch ? parseFloat(numMatch[0]) : 0;
+  const suffix = value.replace(/[\d\.]+/, "");
+
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = num;
+    if (start === end) return;
+    
+    let totalDuration = 2000;
+    let incrementTime = (totalDuration / end) * 2;
+    if (incrementTime > 50) incrementTime = 50; // Max tick speed
+    
+    const timer = setInterval(() => {
+      start += Math.ceil(end / 40);
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [num]);
+
+  return (
+    <div className="relative group overflow-hidden bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center text-center transition-all duration-500 hover:bg-white/10 hover:scale-[1.02]">
+      <div className="absolute inset-0 bg-gradient-to-br from-current/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <span className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 mb-2 relative z-10">
+        {num > 0 ? count : ""}{suffix || value}
+      </span>
+      <span className="text-xs md:text-sm font-bold uppercase tracking-widest relative z-10 text-gray-400 group-hover:text-current transition-colors">
+        {label}
+      </span>
+    </div>
+  );
+};
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -34,8 +78,9 @@ export default function ProjectDetailPage() {
           ]);
           setProject(data);
 
-          // Ambil 3 project lain sebagai rekomendasi
-          const recs = allData.filter(p => String(p.id) !== projectId).slice(0, 3);
+          const recs = allData.filter(p => String(p.id) !== projectId)
+                             .sort((a, b) => Number(b.year || 0) - Number(a.year || 0))
+                             .slice(0, 3);
           setRecommendations(recs);
         } catch (error) {
           console.error("Error loading project:", error);
@@ -49,16 +94,13 @@ export default function ProjectDetailPage() {
 
   const handleProjectClick = (e: React.MouseEvent, id: number | string) => {
     const target = e.target as HTMLElement;
-    // Mencegah navigasi ganda jika yang diklik adalah tombol di dalam card
-    if (target.closest("button") || target.closest("a")) {
-      return;
-    }
+    if (target.closest("button") || target.closest("a")) return;
     router.push(`/projects/${id}`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     );
@@ -66,106 +108,126 @@ export default function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 text-center">
-        <h1 className="text-3xl font-heading font-bold text-white mb-4">Project Not Found</h1>
-        <p className="text-gray-400 mb-8 max-w-md">Proyek yang Anda cari tidak ditemukan dalam arsip kami.</p>
-        <Button onClick={() => router.push("/projects")} className="rounded-full">Back to Projects</Button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505] text-white p-4 text-center">
+        <h1 className="text-5xl font-heading font-black mb-4">404</h1>
+        <p className="text-gray-400 mb-8 max-w-md">The masterpiece you are looking for does not exist.</p>
+        <button onClick={() => router.push("/projects")} className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-full font-bold transition-all">Back to Gallery</button>
       </div>
     );
   }
 
-  // --- Render konten ---
+  // --- Dynamic Color Theme ---
+  const type = project.projectType?.toLowerCase() || "software";
+  let themeColor = "rgba(255,255,255,0.1)";
+  let accentClass = "text-gray-400";
+  
+  if (type === "software") { themeColor = "rgba(99,102,241,0.5)"; accentClass = "text-indigo-400"; }
+  else if (type === "marketing") { themeColor = "rgba(16,185,129,0.5)"; accentClass = "text-emerald-400"; }
+  else if (type === "design") { themeColor = "rgba(236,72,153,0.5)"; accentClass = "text-pink-400"; }
+
   return (
-    <main className="min-h-screen bg-background text-foreground relative overflow-x-hidden selection:bg-primary/30 selection:text-white pb-24">
+    <main 
+      className="min-h-screen bg-[#050505] text-white relative overflow-x-hidden selection:bg-white/30 selection:text-white pb-32"
+      style={{ color: accentClass === 'text-gray-400' ? 'inherit' : undefined }} // Pass base color implicitly via parent if needed, but we'll use classes
+    >
       <Navbar />
 
-      {/* --- BACKGROUND FX --- */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-clip">
-        <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/10 rounded-full blur-[150px] mix-blend-screen" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_80%,transparent_100%)] pointer-events-none" />
+      {/* --- AMBIENT BACKGROUND GLOW --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-clip transition-colors duration-1000">
+        <div 
+          className="absolute top-[10%] left-[10%] w-[600px] h-[600px] rounded-full blur-[150px] mix-blend-screen opacity-40"
+          style={{ backgroundColor: themeColor.replace('0.5', '0.2') }} 
+        />
+        <div 
+          className="absolute bottom-[20%] right-[5%] w-[800px] h-[800px] rounded-full blur-[200px] mix-blend-screen opacity-20"
+          style={{ backgroundColor: themeColor.replace('0.5', '0.1') }} 
+        />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
       </div>
 
-      <div className="container max-w-7xl mx-auto pt-28 md:pt-40 px-4 sm:px-6 relative z-10">
+      <div className="container max-w-7xl mx-auto pt-32 md:pt-48 px-4 sm:px-6 relative z-10">
 
-        {/* Header Grid: Title/Desc (Left) & Meta (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-12 lg:mb-16 items-start">
+        {/* --- 1. HERO SECTION (Immersive & Editorial) --- */}
+        <div className="flex flex-col md:flex-row gap-12 lg:gap-20 mb-20 lg:mb-32">
           
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+          {/* Title & Desc */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="md:w-3/5"
           >
-            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight text-white">
+            <div className="inline-flex items-center gap-2 mb-6">
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: themeColor.replace('rgba', 'rgb').replace(',0.5)', ')') }} />
+              <span className={cn("text-xs font-mono tracking-widest uppercase font-bold", accentClass)}>
+                {project.projectType || 'Software'} Project
+              </span>
+            </div>
+
+            <h1 className="font-heading text-5xl md:text-7xl lg:text-8xl font-black mb-6 leading-[0.9] tracking-tighter uppercase text-white mix-blend-difference">
               {project.title}
             </h1>
+            
             {project.subtitle && (
-              <p className="text-lg md:text-xl text-primary font-medium mb-6">
+              <p className="text-xl md:text-3xl text-gray-300 font-light mb-8 italic">
                 {project.subtitle}
               </p>
             )}
             
-            {/* Rich Text Description */}
             <div 
-              className="prose prose-invert prose-base md:prose-lg text-gray-400 font-light leading-relaxed mb-8 max-w-none
-              prose-a:text-primary hover:prose-a:text-primary/80 prose-strong:text-gray-200"
+              className="prose prose-invert prose-lg text-gray-400 font-light leading-relaxed mb-10 max-w-none"
               dangerouslySetInnerHTML={{ __html: project.desc }}
             />
 
-            {/* Action Buttons */}
+            {/* Quick Actions (Moved up for immediate access, but Demo is also below) */}
             <div className="flex flex-wrap gap-4">
-              {project.demoLink && (
-                <Button 
-                  className="w-full sm:w-auto h-12 px-8 text-base font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform" 
-                  onClick={() => window.open(project.demoLink, "_blank")}
-                >
-                  <ExternalLink className="mr-2 w-5 h-5" /> Live Demo
-                </Button>
-              )}
               {project.repoLink && project.repoLink !== "#" && (
-                <Button 
-                  variant="outline" 
-                  className="w-full sm:w-auto h-12 px-8 text-base font-bold rounded-xl border-white/10 hover:bg-white/5 hover:text-white transition-colors bg-white/5"
+                <button 
                   onClick={() => window.open(project.repoLink, "_blank")}
+                  className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-sm font-bold uppercase tracking-wider transition-all"
                 >
-                  <Github className="mr-2 w-5 h-5" /> Source Code
-                </Button>
+                  <Github size={16} /> Source Code
+                </button>
               )}
             </div>
           </motion.div>
 
-          {/* Project Meta Details */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-xl"
+          {/* Meta Details Panel */}
+          <motion.div 
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            className="md:w-2/5 flex flex-col gap-8"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {project.role && (
-                <div>
-                  <h3 className="text-xs font-mono uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
-                    <Users size={14} /> My Role
-                  </h3>
-                  <p className="text-white font-medium text-lg">{project.role}</p>
-                </div>
-              )}
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl flex flex-col gap-8">
               
-              {project.year && (
+              <div className="flex justify-between items-start border-b border-white/10 pb-6">
                 <div>
-                  <h3 className="text-xs font-mono uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
-                    <Calendar size={14} /> Year
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
+                    <Users size={12} /> Role
                   </h3>
-                  <p className="text-white font-medium text-lg">{project.year}</p>
+                  <p className="text-white font-medium text-lg">{project.role || 'Full Stack Developer'}</p>
                 </div>
-              )}
-              
-              <div className="sm:col-span-2">
-                <h3 className="text-xs font-mono uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
-                  <Layers size={14} /> Tech Stack
+                <div className="text-right">
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2 flex items-center justify-end gap-2">
+                    <Calendar size={12} /> Year
+                  </h3>
+                  <p className="text-white font-medium text-lg">{project.year || new Date().getFullYear()}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
+                  <Layers size={12} /> Core Technologies
                 </h3>
-                <div className="flex flex-wrap gap-2 md:gap-3">
+                <div className="flex flex-wrap gap-2">
                   {project.techStack?.map((tech, idx) => (
-                    <TechBadge key={idx} name={tech.name} color={tech.color} />
+                    <TechBadge 
+                      key={idx} 
+                      name={tech.name} 
+                      color={tech.color} 
+                      icon={tech.icon ? <img src={tech.icon} alt={tech.name} className="w-4 h-4 object-contain" /> : undefined}
+                    />
                   ))}
                 </div>
               </div>
@@ -173,128 +235,228 @@ export default function ProjectDetailPage() {
           </motion.div>
         </div>
 
-        {/* Live Preview (Iframe) */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden mb-16 md:mb-20 border border-white/10 shadow-2xl bg-[#111]"
-        >
-          {/* Top Bar Browser */}
-          <div className="h-10 md:h-12 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 gap-2">
-            <div className="flex gap-1.5 md:gap-2">
-               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-500/80"></div>
-               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-500/80"></div>
-               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-500/80"></div>
-            </div>
-            <div className="flex-1 flex justify-center mx-4">
-              <div className="text-center text-[10px] md:text-xs text-gray-500 font-mono bg-black/40 border border-white/5 rounded-md py-1.5 px-6 truncate max-w-xs">
-                 {project.demoLink || `project-${project.id}.local`}
-              </div>
-            </div>
-            <div className="w-[52px]" /> {/* Spacer */}
-          </div>
-
-          {/* Responsive Height: h-64 (mobile) -> h-96 (tablet) -> h-[600px] (desktop) */}
-          <div className="relative w-full h-[250px] sm:h-[400px] lg:h-[600px] bg-black">
-             <div className={cn(
-               "absolute inset-0 bg-cover bg-center transition-opacity duration-500",
-               iframeLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
-             )}
-             style={{ backgroundImage: `url('${project.image}')` }}
-             >
-                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-6 backdrop-blur-sm">
-                   <MonitorPlay size={48} className="text-primary/50 mb-4 animate-pulse" />
-                   <p className="text-gray-300 font-mono text-sm uppercase tracking-widest">Loading Interactive Preview...</p>
-                </div>
-             </div>
-
-             {project.demoLink && (
-               <iframe
-                 src={project.demoLink}
-                 className="w-full h-full border-0"
-                 onLoad={() => setIframeLoaded(true)}
-                 title={`${project.title} Preview`}
-                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-               />
-             )}
-          </div>
-        </motion.div>
-
-        {/* Features & Challenge */}
-        {(project.features || project.challenge) && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
-            
-            {project.features && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="lg:col-span-1"
-              >
-                <h3 className="font-heading text-xl md:text-2xl font-bold mb-4 md:mb-6 text-white">Key Features</h3>
-                <ul className="space-y-3 md:space-y-4">
-                  {project.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-3 text-gray-400 text-sm md:text-base">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="lg:col-span-2 space-y-8 md:space-y-12"
-            >
-              {project.challenge && (
-                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-8">
-                  <h3 className="font-heading text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-white">The Challenge</h3>
-                  <p className="text-base md:text-lg text-gray-400 font-light leading-relaxed">
-                    {project.challenge}
-                  </p>
-                </div>
-              )}
+        {/* --- 2. EDITORIAL CONTENT (Challenge & Solution) --- */}
+        {(project.challenge || project.solution || project.features) && (
+          <div className="mb-24 lg:mb-32">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
               
-              {project.solution && (
-                <div className="bg-primary/5 border border-primary/20 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-[50px] pointer-events-none" />
-                  <h3 className="font-heading text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-white relative z-10">The Solution</h3>
-                  <p className="text-base md:text-lg text-gray-400 font-light leading-relaxed relative z-10">
-                    {project.solution}
-                  </p>
+              {/* Challenge & Solution */}
+              <div className="lg:col-span-7 flex flex-col gap-12">
+                {project.challenge && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8 }}
+                    className="relative pl-6 md:pl-10 border-l border-white/10"
+                  >
+                    <Target className={cn("absolute -left-3 top-0 w-6 h-6 bg-[#050505]", accentClass)} />
+                    <h3 className="text-sm font-mono uppercase tracking-widest text-gray-500 mb-4">The Challenge</h3>
+                    <p className="text-xl md:text-2xl text-gray-300 font-light leading-relaxed">
+                      {project.challenge}
+                    </p>
+                  </motion.div>
+                )}
+                
+                {project.solution && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="relative pl-6 md:pl-10 border-l"
+                    style={{ borderLeftColor: themeColor.replace('rgba', 'rgb').replace(',0.5)', ')') }}
+                  >
+                    <Lightbulb className={cn("absolute -left-3 top-0 w-6 h-6 bg-[#050505]", accentClass)} />
+                    <h3 className={cn("text-sm font-mono uppercase tracking-widest mb-4", accentClass)}>The Solution</h3>
+                    <p className="text-xl md:text-2xl text-white font-light leading-relaxed">
+                      {project.solution}
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Features List */}
+              {project.features && project.features.length > 0 && (
+                <div className="lg:col-span-5">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    className="bg-white/5 rounded-3xl p-8 md:p-10 border border-white/10"
+                  >
+                    <h3 className="text-2xl font-bold mb-8 text-white uppercase tracking-tight">Key Features</h3>
+                    <ul className="space-y-6">
+                      {project.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-4 text-gray-400">
+                          <span className={cn("mt-1.5 w-1.5 h-1.5 rounded-full shrink-0", accentClass)} style={{ backgroundColor: 'currentColor' }} />
+                          <span className="text-base md:text-lg font-light">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
                 </div>
               )}
-            </motion.div>
-
+            </div>
           </div>
         )}
 
-        {/* --- RECOMMENDATIONS SECTION --- */}
+        {/* --- 3. DYNAMIC SHOWCASE (Moved to Bottom as Requested) --- */}
+        
+        {/* SOFTWARE: Glassmorphic Browser */}
+        {(!project.projectType || project.projectType === "software") && project.demoLink && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="mb-24 lg:mb-32"
+          >
+            <div className="text-center mb-10">
+               <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white mb-4">Live Preview</h2>
+               <p className="text-gray-400 font-light">Interact with the application directly below.</p>
+            </div>
+            
+            <div 
+              className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-black"
+              style={{ boxShadow: `0 30px 100px -20px ${themeColor}` }}
+            >
+              {/* Premium Glassmorphic Browser Bar */}
+              <div className="h-12 md:h-14 bg-white/[0.05] backdrop-blur-xl border-b border-white/10 flex items-center px-4 gap-4 relative z-10">
+                <div className="flex gap-2">
+                   <div className="w-3 h-3 rounded-full bg-[#ff5f56] shadow-inner"></div>
+                   <div className="w-3 h-3 rounded-full bg-[#ffbd2e] shadow-inner"></div>
+                   <div className="w-3 h-3 rounded-full bg-[#27c93f] shadow-inner"></div>
+                </div>
+                <div className="flex-1 flex justify-center mx-4">
+                  <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg py-1.5 px-3 md:px-6 w-full max-w-md">
+                     <span className="text-[10px] font-mono text-gray-500">https://</span>
+                     <span className="text-xs md:text-sm text-gray-300 font-mono truncate">
+                       {project.demoLink.replace(/^https?:\/\//, '')}
+                     </span>
+                  </div>
+                </div>
+                {/* Launch External Button */}
+                <button 
+                  onClick={() => window.open(project.demoLink, "_blank")}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/20 transition-colors text-white"
+                >
+                  <ExternalLink size={14} />
+                </button>
+              </div>
+
+              {/* Iframe Container */}
+              <div className="relative w-full h-[400px] md:h-[600px] lg:h-[800px] bg-[#050505]">
+                 <div className={cn(
+                   "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 flex flex-col items-center justify-center backdrop-blur-md",
+                   iframeLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
+                 )}
+                 style={{ backgroundImage: `url('${project.image}')` }}
+                 >
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                    <MonitorPlay size={64} className={cn("mb-6 animate-pulse relative z-10", accentClass)} />
+                    <p className="text-white font-mono text-sm uppercase tracking-widest relative z-10">Initializing Environment...</p>
+                 </div>
+
+                 {project.demoLink && (
+                   <iframe
+                     src={project.demoLink}
+                     className="w-full h-full border-0 relative z-0"
+                     onLoad={() => setIframeLoaded(true)}
+                     title={`${project.title} Preview`}
+                     sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                   />
+                 )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* MARKETING: Animated Metrics */}
+        {project.projectType === "marketing" && project.metrics && project.metrics.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className={cn("mb-24 lg:mb-32", accentClass)}
+          >
+            <div className="text-center mb-10">
+               <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white mb-4">Campaign Results</h2>
+               <p className="text-gray-400 font-light">Data-driven success metrics.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {project.metrics.map((metric, idx) => (
+                <AnimatedCounter key={idx} value={metric.value} label={metric.label} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* DESIGN: Masonry Gallery */}
+        {project.projectType === "design" && project.gallery && project.gallery.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="mb-24 lg:mb-32"
+          >
+            <div className="text-center mb-10">
+               <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white mb-4">Visual Gallery</h2>
+               <p className="text-gray-400 font-light">Explore the creative direction.</p>
+            </div>
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+              {project.gallery.map((img, idx) => (
+                <div key={idx} className="break-inside-avoid relative rounded-3xl overflow-hidden border border-white/10 group bg-white/5 cursor-pointer">
+                  <img 
+                    src={img} 
+                    alt={`Gallery ${idx + 1}`} 
+                    className="w-full h-auto object-cover group-hover:scale-110 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" 
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-[2px]">
+                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20">
+                      <Sparkles className="text-white w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+
+        {/* --- 4. RECOMMENDATIONS --- */}
         {recommendations.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="mt-24 pt-16 border-t border-white/10"
+            className="pt-16 border-t border-white/10"
           >
-            <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl md:text-4xl font-bold font-heading text-white flex items-center gap-3">
-                <Sparkles className="text-primary" size={32} /> Other Masterpieces
-              </h2>
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+              <div>
+                <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white mb-4">
+                  Next Masterpieces
+                </h2>
+                <p className="text-gray-400 font-light">Continue exploring the portfolio.</p>
+              </div>
+              <button 
+                onClick={() => router.push('/projects')}
+                className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-sm font-bold uppercase tracking-wider transition-all"
+              >
+                View All Projects
+              </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {recommendations.map(item => (
                 <div 
                   key={item.id} 
-                  className="cursor-pointer group" 
+                  className="cursor-pointer group h-full" 
                   onClick={(e) => handleProjectClick(e, item.id)}
                 >
                   <div className="transition-transform duration-500 group-hover:-translate-y-2 h-full">

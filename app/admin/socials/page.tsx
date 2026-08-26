@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { AdminLayout } from "@/components/admin/admin-layout";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { 
@@ -92,15 +92,12 @@ export default function AdminSocials() {
   }), [socials, categories]);
 
   return (
-    <AdminLayout 
-      title="Link & Hubs" 
-      description="Kelola tautan sosial media, GitHub, dan profil eksternal ala Linktree."
-      actionButton={
-        <Button onClick={() => router.push("/admin/socials/new")} size="lg" className="w-full md:w-auto rounded-xl shadow-lg shadow-rose-500/20 bg-rose-600 text-white hover:bg-rose-500 font-bold tracking-wide border border-rose-500/50">
-          <Plus size={18} className="mr-2" /> Tambah Tautan
-        </Button>
-      }
-    >
+    <>
+      <AdminPageHeader 
+        title="Link & Hubs" 
+        description="Kelola tautan sosial media, GitHub, dan profil eksternal ala Linktree." 
+        actionButton={{ label: 'Tambah Tautan', href: '/admin/socials/new' }}
+      />
       {/* --- QUICK INSIGHTS (STATS) --- */}
       {!loading && socials.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-8">
@@ -310,7 +307,7 @@ export default function AdminSocials() {
           </motion.div>
         )}
       </div>
-    </AdminLayout>
+    </>
   );
 }
 

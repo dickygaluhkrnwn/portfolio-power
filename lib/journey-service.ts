@@ -8,6 +8,7 @@ export interface JourneyItem {
   company: string;
   type: "work" | "education" | "certification";
   desc: string;
+  relatedProjects?: string[]; // Array of project IDs related to this journey
   order?: number; // Optional: untuk sorting manual jika diperlukan nanti
 }
 

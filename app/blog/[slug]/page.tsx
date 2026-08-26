@@ -3,14 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
-import { BlogPost, getPostBySlug, getPublishedPosts } from "@/lib/blog-service";
+import { BlogPost, getPostBySlug, getPublishedPosts, BlogComment } from "@/lib/blog-service";
 import { 
   Calendar, Clock, Loader2, Search, Twitter, Linkedin, 
   Facebook, Link as LinkIcon, MessageSquare, Send, 
-  ChevronRight, CheckCircle2, BookOpen
+  ChevronRight, CheckCircle2, BookOpen, Heart, UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, useScroll, useSpring } from "framer-motion";
+import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,14 @@ export default function BlogDetailPage() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isCopied, setIsCopied] = useState(false);
+
+  // --- ENGAGEMENT STATES ---
+  const [likes, setLikes] = useState(0);
+  const [isLiked, setIsLiked] = useState(false); // Cegah spam like terlalu banyak di UI
+  const [comments, setComments] = useState<BlogComment[]>([]);
+  const [commentName, setCommentName] = useState("");
+  const [commentText, setCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   // Scroll Progress Bar Logic
   const { scrollYProgress } = useScroll();
@@ -44,6 +52,10 @@ export default function BlogDetailPage() {
             getPublishedPosts()
           ]);
           setPost(postData);
+          if (postData) {
+            setLikes(postData.likesCount || 0);
+            fetchComments(postData.id);
+          }
           
           // Ambil 4 artikel terbaru selain yang sedang dibaca
           const recommendations = allPostsData
@@ -59,6 +71,77 @@ export default function BlogDetailPage() {
     }
     loadData();
   }, [slug]);
+
+  // Fetch Comments via API Route
+  const fetchComments = async (postId: string) => {
+    try {
+      const res = await fetch(`/api/blog/comments?postId=${postId}`);
+      const data = await res.json();
+      if (data.success) {
+        setComments(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch comments", error);
+    }
+  };
+
+  // Handle Like
+  const handleLike = async () => {
+    if (!post || isLiked) return;
+    
+    // Optimistic UI Update
+    setLikes(prev => prev + 1);
+    setIsLiked(true);
+
+    // Kirim ke API Route secara background
+    try {
+      await fetch('/api/blog/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id })
+      });
+    } catch (error) {
+      console.error("Error liking post", error);
+    }
+  };
+
+  // Handle Comment Submission
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!post || !commentText.trim()) return;
+
+    setIsSubmittingComment(true);
+
+    const newComment: BlogComment = {
+      id: `temp-${Date.now()}`, // Temporary ID for optimistic UI
+      postId: post.id,
+      authorName: commentName.trim() || "Anonymous",
+      content: commentText.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    // Optimistic UI Update
+    setComments(prev => [newComment, ...prev]);
+    setCommentText("");
+
+    try {
+      await fetch('/api/blog/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          postId: post.id, 
+          authorName: newComment.authorName, 
+          content: newComment.content 
+        })
+      });
+      // Boleh fetch ulang untuk mendapat ID asli, tapi untuk UX tidak harus.
+    } catch (error) {
+      console.error("Error submitting comment", error);
+      // Rollback jika gagal (opsional)
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   // Handler for Share Buttons
   const handleShare = (platform: string) => {
@@ -107,7 +190,7 @@ export default function BlogDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground pb-20 relative selection:bg-primary/30 selection:text-white">
+    <main className="min-h-screen bg-background text-foreground pb-32 relative selection:bg-primary/30 selection:text-white">
       <Navbar />
 
       {/* --- READING PROGRESS BAR --- */}
@@ -115,6 +198,34 @@ export default function BlogDetailPage() {
         className="fixed top-0 left-0 right-0 h-1.5 bg-primary origin-left z-[100] shadow-[0_0_10px_rgba(99,102,241,0.5)]" 
         style={{ scaleX }} 
       />
+
+      {/* --- FLOATING ACTION BAR (FAB - GEN Z STYLE) --- */}
+      <motion.div 
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 1, type: "spring", stiffness: 200, damping: 20 }}
+        className="fixed bottom-6 lg:bottom-10 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 p-2.5 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8),0_0_30px_rgba(236,72,153,0.3)]"
+      >
+        <button 
+          onClick={handleLike}
+          className={cn(
+            "flex items-center gap-2 px-6 py-3.5 rounded-full font-bold transition-all duration-300 transform active:scale-90",
+            isLiked 
+              ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.5)]" 
+              : "bg-white/10 text-white hover:bg-white/20"
+          )}
+        >
+          <Heart className={cn("w-5 h-5", isLiked ? "fill-white animate-bounce" : "")} />
+          <span className="text-sm md:text-base">{likes} <span className="hidden sm:inline">Likes</span></span>
+        </button>
+        <button 
+          onClick={() => document.getElementById("comments-section")?.scrollIntoView({ behavior: "smooth" })}
+          className="flex items-center gap-2 px-6 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all font-bold transform active:scale-90"
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="text-sm md:text-base">{comments.length} <span className="hidden sm:inline">Komen</span></span>
+        </button>
+      </motion.div>
 
       {/* --- BACKGROUND FX --- */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-clip">
@@ -143,15 +254,20 @@ export default function BlogDetailPage() {
               {post.title}
             </h1>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-gray-400 text-sm font-mono">
+            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-gray-400 text-sm font-mono bg-black/40 w-fit mx-auto px-6 py-3 rounded-full border border-white/10 backdrop-blur-md">
               <span className="flex items-center gap-2">
                 <Calendar size={14} className="text-primary"/>
                 {new Date(post.publishedAt).toLocaleDateString("id-ID", { month: "long", day: "numeric", year: "numeric" })}
               </span>
-              <span className="w-1 h-1 rounded-full bg-white/20" />
-              <span className="flex items-center gap-2">
-                <Clock size={14} className="text-primary"/>
-                5 min read
+              <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
+              <span className="flex items-center gap-2 text-pink-400 font-bold">
+                <Heart size={14} className="fill-pink-400"/>
+                {likes} Likes
+              </span>
+              <span className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
+              <span className="flex items-center gap-2 text-blue-400 font-bold">
+                <MessageSquare size={14} className="fill-blue-400"/>
+                {comments.length} Diskusi
               </span>
             </div>
           </motion.div>
@@ -166,7 +282,7 @@ export default function BlogDetailPage() {
           transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
           className="container max-w-7xl mx-auto px-4 sm:px-6 -mt-4 relative z-20 mb-12 md:mb-20"
         >
-          <div className="w-full aspect-[16/9] md:aspect-[21/9] rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0d1117] relative group">
+          <div className="w-full aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-[#0d1117] relative group">
             <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
           </div>
@@ -198,7 +314,7 @@ export default function BlogDetailPage() {
             </article>
 
             {/* Share Article Section */}
-            <div className="mt-16 pt-8 border-t border-white/10">
+            <div className="mt-16 pt-16 border-t border-white/10">
               <div className="p-8 rounded-3xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg backdrop-blur-sm">
                 <div className="text-center sm:text-left">
                   <h4 className="font-heading text-xl font-bold text-white mb-2">Bagikan Artikel Ini</h4>
@@ -222,33 +338,112 @@ export default function BlogDetailPage() {
               </div>
             </div>
 
-            {/* Comments Mockup Section */}
-            <div className="mt-16 mb-8">
+            {/* --- GIANT CTA BOX (GEN Z ENGAGEMENT) --- */}
+            <div className="mt-16 pt-16 border-t border-white/10">
+              <div className="p-8 md:p-12 rounded-[2rem] bg-gradient-to-br from-pink-500/10 via-purple-500/5 to-[#050505] border border-pink-500/20 text-center relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-pink-500/20 rounded-full blur-[80px] -z-10 group-hover:bg-pink-500/30 transition-all duration-700" />
+                
+                <h3 className="text-3xl md:text-4xl font-bold font-heading text-white mb-4">Suka dengan tulisan ini? 🔥</h3>
+                <p className="text-gray-400 mb-8 max-w-lg mx-auto text-sm md:text-base">
+                  Bantu artikel ini naik ke posisi <b>Trending</b> agar lebih banyak orang yang terinspirasi. Klik tombol Like di bawah!
+                </p>
+                
+                <button 
+                  onClick={handleLike}
+                  className={cn(
+                    "relative inline-flex items-center justify-center gap-3 px-10 py-5 rounded-full font-bold text-lg transition-all duration-300 transform active:scale-95 shadow-2xl overflow-hidden",
+                    isLiked 
+                      ? "bg-white text-pink-500 shadow-[0_0_40px_rgba(255,255,255,0.3)]" 
+                      : "bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:shadow-[0_0_40px_rgba(236,72,153,0.6)] hover:-translate-y-1"
+                  )}
+                >
+                  <Heart className={cn("w-6 h-6", isLiked ? "fill-pink-500" : "fill-white")} />
+                  {isLiked ? "Makasih Dukungannya! 💖" : "Kasih API! (Like)"}
+                </button>
+              </div>
+            </div>
+
+            {/* --- SECTION: COMMENTS --- */}
+            <div id="comments-section" className="mt-16 mb-8 pt-8 border-t border-white/10 scroll-mt-32">
               <div className="flex items-center gap-3 mb-8">
                 <MessageSquare className="w-6 h-6 text-primary" />
-                <h3 className="font-heading text-2xl font-bold text-white">Diskusi <span className="text-gray-500 text-lg font-normal">(0)</span></h3>
+                <h3 className="font-heading text-2xl font-bold text-white">Diskusi <span className="text-gray-500 text-lg font-normal">({comments.length})</span></h3>
               </div>
 
-              <div className="p-6 rounded-3xl bg-black/40 border border-white/10 shadow-inner mb-8">
-                <form className="flex flex-col gap-4">
-                  <textarea 
-                    rows={3}
-                    placeholder="Bagikan pemikiran Anda tentang artikel ini..."
-                    className="w-full bg-transparent border-b border-white/10 px-2 py-3 text-white focus:outline-none focus:border-primary transition-colors resize-none placeholder:text-gray-600 text-sm"
+              {/* Form Tambah Komentar */}
+              <div className="p-6 md:p-8 rounded-[2rem] bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/20 shadow-inner mb-10 relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-[50px] -z-10" />
+                <h4 className="font-bold text-white mb-4 text-lg">Ikut Nimbrung! 🚀</h4>
+                <form onSubmit={handleCommentSubmit} className="flex flex-col gap-4 relative z-10">
+                  <input
+                    type="text"
+                    placeholder="Nama / Nickname Kerenmu (opsional)"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-blue-500/50 transition-colors text-sm shadow-inner"
+                    value={commentName}
+                    onChange={(e) => setCommentName(e.target.value)}
                   />
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-gray-500 font-mono">Mendukung format Markdown dasar.</span>
-                    <Button className="rounded-full px-6 bg-white text-black hover:bg-gray-200 font-bold" type="button">
-                      Kirim <Send size={14} className="ml-2" />
+                  <textarea 
+                    rows={4}
+                    placeholder="Tulis pendapatmu di sini... (Support Markdown)"
+                    required
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-blue-500/50 transition-colors resize-y placeholder:text-gray-500 text-sm shadow-inner"
+                  />
+                  <div className="flex justify-end items-center mt-2">
+                    <Button 
+                      type="submit" 
+                      disabled={!commentText.trim() || isSubmittingComment}
+                      className="rounded-full px-8 py-6 bg-blue-500 hover:bg-blue-600 text-white font-bold tracking-wide disabled:opacity-50 shadow-lg shadow-blue-500/25 transition-all transform active:scale-95"
+                    >
+                      {isSubmittingComment ? "Mengirim..." : "Kirim Komentar"} <Send size={16} className="ml-2" />
                     </Button>
                   </div>
                 </form>
               </div>
 
-              <div className="text-center py-16 border border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
-                <MessageSquare className="w-12 h-12 mx-auto text-gray-700 mb-4" />
-                <p className="text-gray-300 font-bold text-lg">Belum ada komentar.</p>
-                <p className="text-gray-500 mt-2">Jadilah yang pertama memulai diskusi luar biasa ini!</p>
+              {/* Daftar Komentar */}
+              <div className="flex flex-col gap-6">
+                <AnimatePresence>
+                  {comments.length > 0 ? (
+                    comments.map((comment) => (
+                      <motion.div 
+                        key={comment.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-6 rounded-2xl bg-[#0a0a0a] border border-white/5"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/5">
+                              <UserCircle className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-white text-sm">{comment.authorName}</h4>
+                              <p className="text-[10px] text-gray-500 font-mono">
+                                {new Date(comment.createdAt).toLocaleDateString("id-ID", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-gray-300 text-sm leading-relaxed">
+                          {comment.content}
+                        </p>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-16 border border-dashed border-white/10 rounded-3xl bg-white/[0.01]"
+                    >
+                      <MessageSquare className="w-12 h-12 mx-auto text-gray-700 mb-4" />
+                      <p className="text-gray-300 font-bold text-lg">Belum ada komentar.</p>
+                      <p className="text-gray-500 mt-2 text-sm">Jadilah yang pertama memulai diskusi luar biasa ini!</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>
@@ -310,19 +505,6 @@ export default function BlogDetailPage() {
                   ) : (
                     <p className="text-sm text-gray-500 text-center py-4 border border-dashed border-white/10 rounded-xl">Belum ada artikel lain.</p>
                   )}
-                </div>
-              </div>
-
-              {/* Newsletter Mockup */}
-              <div className="bg-gradient-to-br from-primary/10 via-[#0a0a0a] to-accent/5 border border-primary/20 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-[40px] transition-all group-hover:bg-primary/30 group-hover:scale-150 duration-700" />
-                <h4 className="font-heading font-bold text-white text-xl mb-2 relative z-10">Tech Newsletter</h4>
-                <p className="text-xs text-gray-400 mb-6 relative z-10 leading-relaxed">Dapatkan <b>insight</b> terbaru dan tutorial pemrograman langsung di <b>inbox</b> Anda.</p>
-                <div className="flex flex-col gap-3 relative z-10">
-                  <input type="email" placeholder="Alamat Email Anda" className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors shadow-inner" />
-                  <Button className="w-full rounded-xl py-6 bg-white text-black hover:bg-gray-200 font-bold tracking-wide">
-                    Berlangganan
-                  </Button>
                 </div>
               </div>
 
