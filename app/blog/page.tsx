@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Navbar } from "@/components/layout/navbar";
 import { BlogPost, getPublishedPosts } from "@/lib/blog-service";
 import { 
   Calendar, ArrowRight, BookOpen, Search, X, 
@@ -94,8 +93,7 @@ export default function BlogPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground relative overflow-x-hidden selection:bg-primary/30 selection:text-white pb-24">
-      <Navbar />
-
+      
       {/* --- BACKGROUND FX --- */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
@@ -120,19 +118,19 @@ export default function BlogPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
                   transition={{ duration: 0.5 }}
-                  className="container max-w-7xl mx-auto px-4 sm:px-6 mb-16"
+                  className="container max-w-7xl mx-auto px-4 sm:px-6 mb-12 md:mb-16"
                 >
-                  <div className="group relative overflow-hidden rounded-[2rem] md:rounded-[3rem] border border-white/10 bg-[#050505] shadow-2xl h-[60vh] min-h-[500px]">
+                  <div className="group relative overflow-hidden rounded-[2rem] md:rounded-[3rem] border border-white/10 bg-[#050505] shadow-2xl h-[50vh] min-h-[380px] md:h-[60vh] md:min-h-[500px]">
                     <Link href={`/blog/${topViralPost.slug}`} className="block w-full h-full relative">
                       {topViralPost.coverImage ? (
                         <img 
                           src={topViralPost.coverImage} 
                           alt={topViralPost.title} 
-                          className="w-full h-full object-cover transition-transform duration-[20s] group-hover:scale-110" 
+                          className="w-full h-full object-cover transition-transform duration-[20s] group-hover:scale-105" 
                         />
                       ) : (
                         <div className="w-full h-full bg-[#0d1117] flex items-center justify-center">
-                          <Flame className="w-32 h-32 text-white/5" />
+                          <Flame className="w-20 h-20 md:w-32 md:h-32 text-white/5" />
                         </div>
                       )}
                       
@@ -210,12 +208,12 @@ export default function BlogPage() {
                 </div>
 
                 {allTags.length > 0 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-[calc(100%+2rem)] md:w-full">
                     <Tag className="w-4 h-4 text-gray-600 shrink-0 mr-2 hidden md:block" />
                     <button
                       onClick={() => setSelectedTag(null)}
                       className={cn(
-                        "px-4 py-2 rounded-full text-xs font-mono whitespace-nowrap transition-all border",
+                        "px-4 py-2 rounded-full text-[10px] md:text-xs font-mono whitespace-nowrap transition-all border shrink-0 snap-start",
                         selectedTag === null 
                           ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
                           : "bg-transparent border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
@@ -228,7 +226,7 @@ export default function BlogPage() {
                         key={tag}
                         onClick={() => setSelectedTag(tag)}
                         className={cn(
-                          "px-4 py-2 rounded-full text-xs font-mono whitespace-nowrap transition-all border",
+                          "px-4 py-2 rounded-full text-[10px] md:text-xs font-mono whitespace-nowrap transition-all border shrink-0 snap-start",
                           selectedTag === tag 
                             ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
                             : "bg-transparent border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
@@ -257,30 +255,36 @@ export default function BlogPage() {
                   
                   {/* SECTION: TRENDING ROW */}
                   {trendingPosts.length > 0 && (
-                    <div className="flex flex-col gap-8">
-                      <div className="flex items-center gap-3 text-white font-heading font-bold text-2xl md:text-3xl">
-                        <TrendingUp className="text-primary w-8 h-8 p-1.5 bg-primary/20 rounded-xl" /> Sedang Tren
+                    <div className="flex flex-col gap-6 md:gap-8 overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 md:gap-3 text-white font-heading font-bold text-xl md:text-3xl">
+                          <TrendingUp className="text-primary w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5 bg-primary/20 rounded-lg md:rounded-xl" /> Sedang Tren
+                        </div>
+                        <div className="md:hidden flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-widest text-primary animate-pulse border border-primary/20 px-2 py-0.5 rounded-full w-fit">
+                            Swipe <ArrowRight size={10} />
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      
+                      <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-4 md:gap-6 pb-6 md:pb-0 pt-2 md:pt-0 snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         {trendingPosts.map((post, idx) => (
-                          <Link key={post.id} href={`/blog/${post.slug}`} className="group relative bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-6 flex flex-col gap-5 hover:border-white/20 hover:bg-[#111] transition-all shadow-xl hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
-                            <div className="text-6xl font-bold font-heading text-white/5 group-hover:text-primary/10 absolute top-4 right-6 transition-colors z-0">
+                          <Link key={post.id} href={`/blog/${post.slug}`} className="w-[85vw] sm:w-[320px] md:w-auto shrink-0 snap-center group relative bg-white/[0.02] border border-white/5 rounded-3xl p-5 md:p-6 flex flex-col gap-4 hover:border-white/20 hover:bg-[#111] transition-all shadow-xl hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]">
+                            <div className="text-5xl md:text-6xl font-bold font-heading text-white/5 group-hover:text-primary/10 absolute top-4 right-6 transition-colors z-0">
                               0{idx + 2}
                             </div>
-                            <div className="w-full h-40 rounded-2xl overflow-hidden shrink-0 border border-white/5 relative z-10">
+                            <div className="w-full h-32 md:h-40 rounded-2xl overflow-hidden shrink-0 border border-white/5 relative z-10">
                               {post.coverImage ? (
                                 <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                               ) : (
-                                <div className="w-full h-full bg-[#111] flex items-center justify-center"><BookOpen className="w-8 h-8 text-white/10" /></div>
+                                <div className="w-full h-full bg-[#111] flex items-center justify-center"><BookOpen className="w-6 h-6 md:w-8 md:h-8 text-white/10" /></div>
                               )}
                             </div>
                             <div className="flex flex-col justify-center relative z-10 min-w-0 flex-grow">
-                              <h3 className="text-white text-lg font-bold line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-4">
+                              <h3 className="text-white text-base md:text-lg font-bold line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-3 md:mb-4">
                                 {post.title}
                               </h3>
-                              <div className="flex items-center gap-4 text-xs font-mono text-gray-500 mt-auto pt-4 border-t border-white/5">
-                                <span className="flex items-center gap-1.5 group-hover:text-pink-400 transition-colors"><Heart className="w-3.5 h-3.5" /> {post.likesCount || 0}</span>
-                                <span className="flex items-center gap-1.5 group-hover:text-blue-400 transition-colors"><MessageCircle className="w-3.5 h-3.5" /> {post.commentsCount || 0}</span>
+                              <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-xs font-mono text-gray-500 mt-auto pt-3 md:pt-4 border-t border-white/5">
+                                <span className="flex items-center gap-1.5 group-hover:text-pink-400 transition-colors"><Heart className="w-3 h-3 md:w-3.5 md:h-3.5" /> {post.likesCount || 0}</span>
+                                <span className="flex items-center gap-1.5 group-hover:text-blue-400 transition-colors"><MessageCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> {post.commentsCount || 0}</span>
                               </div>
                             </div>
                           </Link>
@@ -292,8 +296,8 @@ export default function BlogPage() {
                   {/* SECTION: LATEST & DISCOVER (BENTO GRID) */}
                   {latestPosts.length > 0 && (
                     <div className="flex flex-col gap-8">
-                      <div className="flex items-center gap-3 text-white font-heading font-bold text-2xl md:text-3xl">
-                        <Zap className="text-primary w-8 h-8 p-1.5 bg-primary/20 rounded-xl" /> Artikel Terbaru
+                      <div className="flex items-center gap-2 md:gap-3 text-white font-heading font-bold text-xl md:text-3xl">
+                        <Zap className="text-primary w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5 bg-primary/20 rounded-lg md:rounded-xl" /> Artikel Terbaru
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {latestPosts.map((post, index) => {
@@ -323,8 +327,8 @@ function BentoCard({ post, isLarge = false }: { post: BlogPost, isLarge?: boolea
   return (
     <Link href={`/blog/${post.slug}`} className="group block h-full outline-none w-full relative">
       <article className={cn(
-        "flex flex-col bg-[#0a0a0a] border border-white/10 rounded-[2rem] overflow-hidden hover:border-white/20 hover:bg-[#111] transition-all duration-500 shadow-xl group-hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)] relative",
-        isLarge ? "h-[450px] sm:h-[400px] sm:flex-row" : "h-[400px]"
+        "flex flex-col bg-[#0a0a0a] border border-white/10 rounded-[2rem] overflow-hidden hover:border-white/20 hover:bg-[#111] transition-all duration-500 shadow-xl group-hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)] relative h-full",
+        isLarge ? "min-h-[450px] sm:min-h-[400px] sm:flex-row" : "min-h-[400px]"
       )}>
         {/* Image */}
         <div className={cn(

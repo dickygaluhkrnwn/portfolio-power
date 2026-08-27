@@ -11,6 +11,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { Analytics } from "@vercel/analytics/react"; 
 import { ChatWidget } from "@/components/ai/chat-widget";
 import { FooterWrapper } from "@/components/layout/footer-wrapper";
+import { NavbarWrapper } from "@/components/layout/navbar-wrapper";
 
 // Font Setup
 const inter = Inter({
@@ -111,6 +112,8 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CommandPalette />
+          
+          <NavbarWrapper />
           
           {children}
           

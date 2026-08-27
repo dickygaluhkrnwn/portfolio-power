@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button"; 
 import { 
   Code2, Database, Globe, Layout, Server, Cpu, Terminal, 
@@ -70,11 +69,16 @@ export default function AboutPage() {
   const [journeyItems, setJourneyItems] = useState<JourneyItem[]>([]); 
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   
   // State for Skills Tab
   const [activeSkillCategory, setActiveSkillCategory] = useState<string>("All");
 
   useEffect(() => {
+    setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+
     async function loadData() {
       const [projectsData, journeyData, skillsData] = await Promise.all([
         getAllProjects(),
@@ -95,6 +99,8 @@ export default function AboutPage() {
       setLoading(false);
     }
     loadData();
+
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const getProjectDetails = (projectId: string | number) => {
@@ -128,12 +134,11 @@ export default function AboutPage() {
 
   return (
     <main className="min-h-screen bg-[#050505] text-foreground relative overflow-x-hidden selection:bg-primary/30 selection:text-white pb-24">
-      <Navbar />
-
+      
       {/* --- BACKGROUND FX --- */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-clip">
-        <div className="absolute top-[0%] left-[20%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] mix-blend-screen" />
-        <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute top-[0%] left-[20%] w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-primary/10 rounded-full blur-[100px] md:blur-[120px] mix-blend-screen" />
+        <div className="absolute top-[40%] right-[-10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-600/10 rounded-full blur-[100px] md:blur-[120px] mix-blend-screen" />
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
         {/* Grid lines */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
@@ -142,10 +147,10 @@ export default function AboutPage() {
       <div className="container max-w-7xl mx-auto pt-24 pb-16 md:pt-32 px-4 sm:px-6 relative z-10">
         
         {/* ================= HERO SECTION ================= */}
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center mb-24 md:mb-32">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center mb-24 md:mb-32">
           <motion.div 
             initial="hidden" animate="visible" variants={STAGGER_CONTAINER}
-            className="text-left max-w-2xl mx-auto lg:mx-0"
+            className="lg:col-span-7 text-left max-w-2xl mx-auto lg:mx-0 order-2 lg:order-1"
           >
             <motion.div variants={FADE_UP} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-md mb-6">
               <Terminal size={14} className="text-primary" />
@@ -154,14 +159,14 @@ export default function AboutPage() {
               </span>
             </motion.div>
             
-            <motion.h1 variants={FADE_UP} className="font-heading text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6">
+            <motion.h1 variants={FADE_UP} className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6">
               Building Systems. <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-primary/80 animate-gradient bg-300%">
                 Scaling Excellence.
               </span>
             </motion.h1>
             
-            <motion.p variants={FADE_UP} className="text-gray-400 text-lg md:text-xl leading-relaxed mb-8 max-w-xl">
+            <motion.p variants={FADE_UP} className="text-gray-400 text-base md:text-lg lg:text-xl leading-relaxed mb-8 max-w-xl">
               Saya adalah seorang <span className="font-bold text-white">developer</span> dan <span className="font-bold text-white">marketer</span> yang memadukan logika teknis tingkat tinggi dengan intuisi bisnis. Saya tidak hanya menulis kode; saya membangun solusi digital yang mendominasi pasar.
             </motion.p>
 
@@ -175,83 +180,83 @@ export default function AboutPage() {
             </motion.div>
           </motion.div>
 
-          {/* Interactive Code Editor Animation */}
+          {/* Interactive Code Editor Animation (NOW VISIBLE ON MOBILE WITH 3D POP) */}
           <motion.div 
-            initial={{ opacity: 0, x: 50 }} 
-            animate={{ opacity: 1, x: 0 }} 
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            className="relative hidden lg:block"
+            initial={{ opacity: 0, scale: 0.8, rotateX: 20 }} 
+            animate={{ opacity: 1, scale: 1, rotateX: 0 }} 
+            transition={{ duration: 0.8, type: "spring", stiffness: 100, delay: 0.3 }}
+            className="lg:col-span-5 relative order-1 lg:order-2 perspective-[1000px]"
           >
             {/* Background glow behind editor */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-purple-500/20 blur-3xl rounded-full" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-purple-500/20 blur-2xl md:blur-3xl rounded-full" />
             
             <motion.div 
-              animate={{ y: [0, -15, 0] }} 
+              animate={{ y: [0, -10, 0] }} 
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full max-w-[500px] ml-auto rounded-2xl bg-[#09090b]/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-[500px] mx-auto lg:ml-auto rounded-2xl bg-[#09090b]/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden"
             >
               {/* Window Header */}
               <div className="flex items-center px-4 py-3 bg-white/5 border-b border-white/10">
                 <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-                  <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                  <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#ff5f56]" />
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#ffbd2e]" />
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-[#27c93f]" />
                 </div>
                 <div className="mx-auto flex items-center gap-2">
-                  <Code2 size={14} className="text-gray-500" />
-                  <span className="text-xs text-gray-400 font-mono">Developer.tsx</span>
+                  <Code2 size={12} className="text-gray-500 hidden sm:block" />
+                  <span className="text-[10px] sm:text-xs text-gray-400 font-mono">Developer.tsx</span>
                 </div>
               </div>
               
               {/* Code Content */}
-              <div className="p-6 font-mono text-sm md:text-base leading-relaxed overflow-x-auto text-left">
+              <div className="p-4 md:p-6 font-mono text-[11px] sm:text-sm md:text-base leading-relaxed overflow-x-auto text-left hide-scrollbar">
                 <div className="text-pink-400">const <span className="text-blue-400">Profile</span> <span className="text-white">=</span> <span className="text-yellow-300">()</span> <span className="text-pink-400">=&gt;</span> <span className="text-yellow-300">{'{'}</span></div>
-                <div className="pl-6 mt-2">
+                <div className="pl-4 md:pl-6 mt-1 md:mt-2">
                   <div className="text-gray-400">const <span className="text-white">stats</span> <span className="text-pink-400">=</span> <span className="text-purple-300">{'{'}</span></div>
-                  <div className="pl-6"><span className="text-blue-300">projectsBuilt</span>: <span className="text-orange-400">100</span>,</div>
-                  <div className="pl-6"><span className="text-blue-300">cupsOfCoffee</span>: <span className="text-green-300">"∞"</span>,</div>
-                  <div className="pl-6"><span className="text-blue-300">bugsFixed</span>: <span className="text-orange-400">999</span></div>
+                  <div className="pl-4 md:pl-6"><span className="text-blue-300">projectsBuilt</span>: <span className="text-orange-400">100</span>,</div>
+                  <div className="pl-4 md:pl-6"><span className="text-blue-300">cupsOfCoffee</span>: <span className="text-green-300">"∞"</span>,</div>
+                  <div className="pl-4 md:pl-6"><span className="text-blue-300">bugsFixed</span>: <span className="text-orange-400">999</span></div>
                   <div className="text-purple-300">{'}'}</div>
                   <br/>
                   <div className="text-pink-400">return <span className="text-purple-300">(</span></div>
-                  <div className="pl-6 text-gray-300">
+                  <div className="pl-4 md:pl-6 text-gray-300">
                     <span className="text-gray-400">&lt;</span><span className="text-green-400">Developer</span><br/>
-                    <span className="pl-6 text-blue-300">role</span><span className="text-pink-400">=</span><span className="text-orange-300">"Full Stack Ninja"</span><br/>
-                    <span className="pl-6 text-blue-300">passion</span><span className="text-pink-400">=</span><span className="text-orange-300">"Building Scalable UI/UX"</span><br/>
+                    <span className="pl-4 md:pl-6 text-blue-300">role</span><span className="text-pink-400">=</span><span className="text-orange-300">"Full Stack Ninja"</span><br/>
+                    <span className="pl-4 md:pl-6 text-blue-300">passion</span><span className="text-pink-400">=</span><span className="text-orange-300">"Scalable UI/UX"</span><br/>
                     <span className="text-gray-400">/&gt;</span>
                   </div>
                   <div className="text-purple-300">)</div>
                 </div>
-                <div className="text-yellow-300 mt-2">{'}'}</div>
+                <div className="text-yellow-300 mt-1 md:mt-2">{'}'}</div>
               </div>
             </motion.div>
             
-            {/* Floating Elements / Tech Badges */}
+            {/* Floating Elements / Tech Badges (Hidden on ultra small screens to avoid clipping) */}
             <motion.div 
               animate={{ y: [0, 10, 0], rotate: [0, 5, 0] }} 
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute -bottom-6 -left-6 bg-[#0a0a0a] border border-white/10 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 backdrop-blur-md"
+              className="absolute -bottom-4 -left-2 md:-bottom-6 md:-left-6 bg-[#0a0a0a] border border-white/10 px-3 py-2 md:px-4 md:py-3 rounded-2xl shadow-xl flex items-center gap-2 md:gap-3 backdrop-blur-md hidden sm:flex"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
-                <Code2 size={16} />
+              <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <Code2 size={14} className="md:w-4 md:h-4" />
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Clean Code</p>
-                <p className="text-sm font-bold text-white">Architecture</p>
+                <p className="text-[8px] md:text-[10px] text-gray-400 font-mono uppercase tracking-wider">Clean Code</p>
+                <p className="text-xs md:text-sm font-bold text-white">Architecture</p>
               </div>
             </motion.div>
 
             <motion.div 
               animate={{ y: [0, -15, 0], rotate: [0, -5, 0] }} 
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-              className="absolute -top-8 -right-4 bg-[#0a0a0a] border border-white/10 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 backdrop-blur-md"
+              className="absolute -top-6 -right-2 md:-top-8 md:-right-4 bg-[#0a0a0a] border border-white/10 px-3 py-2 md:px-4 md:py-3 rounded-2xl shadow-xl flex items-center gap-2 md:gap-3 backdrop-blur-md hidden sm:flex"
             >
-              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
-                <Target size={16} />
+              <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                <Target size={14} className="md:w-4 md:h-4" />
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Marketing</p>
-                <p className="text-sm font-bold text-white">Conversion</p>
+                <p className="text-[8px] md:text-[10px] text-gray-400 font-mono uppercase tracking-wider">Marketing</p>
+                <p className="text-xs md:text-sm font-bold text-white">Conversion</p>
               </div>
             </motion.div>
           </motion.div>
@@ -265,7 +270,7 @@ export default function AboutPage() {
             <p className="text-gray-400 max-w-2xl mx-auto">Koleksi teknologi, API, dan strategi yang saya kuasai untuk membangun mahakarya digital.</p>
           </motion.div>
 
-          <div className="space-y-20 mt-8">
+          <div className="space-y-16 md:space-y-20 mt-8">
             {skillCategories.filter(cat => cat !== "All").map(cat => {
               const categorySkills = skills.filter(s => (s.category || "Uncategorized") === cat);
               if (categorySkills.length === 0) return null;
@@ -273,15 +278,30 @@ export default function AboutPage() {
               return (
                 <div key={cat} className="relative">
                   {/* Category Header */}
-                  <div className="flex items-center gap-4 mb-8">
+                  <motion.div 
+                    initial={{ opacity: 0, x: -30 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, amount: 0.8 }}
+                    className="flex items-center gap-4 mb-6 md:mb-8"
+                  >
                     <h3 className="text-2xl md:text-3xl font-heading font-bold text-white">{cat}</h3>
-                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
-                  </div>
+                    <div className="md:hidden flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono uppercase tracking-widest text-primary animate-pulse">
+                      Swipe <ArrowRight size={10} />
+                    </div>
+                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 via-white/5 to-transparent hidden md:block" />
+                  </motion.div>
                   
-                  {/* Category Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {categorySkills.map(skill => (
-                      <div key={skill.id} className="bg-white/[0.02] border border-white/10 rounded-3xl p-6 relative group hover:bg-white/[0.04] hover:border-primary/30 transition-all duration-300 shadow-xl flex flex-col">
+                  {/* Category Grid / Carousel */}
+                  <div className="flex md:grid flex-row md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 perspective-[1200px] overflow-x-auto md:overflow-visible snap-x snap-mandatory hide-scrollbar pb-8 md:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0" style={{ scrollbarWidth: 'none' }}>
+                    {categorySkills.map((skill, sIdx) => (
+                      <motion.div 
+                        key={skill.id} 
+                        initial={isMobile ? { opacity: 0.3, scale: 0.8, rotateY: 30, x: 50 } : { opacity: 0, scale: 0.9, rotateX: 20, y: 30 }}
+                        whileInView={isMobile ? { opacity: 1, scale: 1, rotateY: 0, x: 0 } : { opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+                        viewport={{ once: isMobile ? false : true, amount: 0.5 }}
+                        transition={{ type: "spring", stiffness: 150, damping: 20, delay: isMobile ? 0 : sIdx * 0.1 }}
+                        className="w-[75vw] sm:w-[320px] md:w-auto flex-shrink-0 snap-center md:flex-shrink md:snap-align-none bg-white/[0.02] border border-white/10 rounded-3xl p-6 relative group hover:bg-white/[0.04] hover:border-primary/30 transition-all duration-300 shadow-xl flex flex-col"
+                      >
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
                         
                         <div className="flex items-start justify-between mb-5 relative z-10">
@@ -303,11 +323,11 @@ export default function AboutPage() {
                           {skill.hasCertificate && (
                             skill.certificateUrl ? (
                               <a href={skill.certificateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(234,179,8,0.15)] hover:bg-yellow-500/20 transition-colors cursor-pointer z-20 relative">
-                                <FileBadge size={14} /> Certified <ExternalLink size={10} className="ml-0.5" />
+                                <FileBadge size={14} /> <span className="hidden sm:inline">Certified</span> <ExternalLink size={10} className="ml-0.5 hidden sm:block" />
                               </a>
                             ) : (
                               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(234,179,8,0.15)] relative z-10">
-                                <FileBadge size={14} /> Certified
+                                <FileBadge size={14} /> <span className="hidden sm:inline">Certified</span>
                               </div>
                             )
                           )}
@@ -336,11 +356,20 @@ export default function AboutPage() {
                         
                         {skill.proficiency && (
                           <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden mt-auto mb-6 relative z-10">
-                            <div className={cn(
-                              "h-full rounded-full transition-all duration-1000",
-                              skill.proficiency === "Advanced" || skill.proficiency === "Professional" || skill.proficiency === "Expert" ? "w-[90%] bg-primary" : 
-                              skill.proficiency === "Intermediate" ? "w-[65%] bg-blue-400" : "w-[40%] bg-purple-400"
-                            )} />
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              whileInView={{ 
+                                width: skill.proficiency === "Advanced" || skill.proficiency === "Professional" || skill.proficiency === "Expert" ? "90%" : 
+                                      skill.proficiency === "Intermediate" ? "65%" : "40%"
+                              }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
+                              className={cn(
+                                "h-full rounded-full transition-all duration-1000",
+                                skill.proficiency === "Advanced" || skill.proficiency === "Professional" || skill.proficiency === "Expert" ? "bg-primary" : 
+                                skill.proficiency === "Intermediate" ? "bg-blue-400" : "bg-purple-400"
+                              )} 
+                            />
                           </div>
                         )}
 
@@ -350,7 +379,7 @@ export default function AboutPage() {
                           if (linkedProjects.length === 0) return null;
                           return <SkillProjectsList linkedProjects={linkedProjects} router={router} />;
                         })()}
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -362,89 +391,94 @@ export default function AboutPage() {
 
         {/* ================= JOURNEY TIMELINE ================= */}
         <div>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={FADE_UP} className="mb-16 text-center">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={FADE_UP} className="mb-12 md:mb-16 text-center">
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">Journey & <span className="text-primary">Milestones</span></h2>
             <p className="text-gray-400 max-w-2xl mx-auto">Perjalanan teknis dan manajerial dari awal karir hingga sekarang.</p>
           </motion.div>
 
-          <div className="relative max-w-4xl mx-auto">
+          <div className="relative max-w-4xl mx-auto overflow-hidden sm:overflow-visible">
             {/* The Vertical Line */}
             <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/50 via-white/10 to-transparent transform md:-translate-x-1/2" />
 
             {journeyItems.map((item, idx) => {
               const isEven = idx % 2 === 0;
               return (
-                <motion.div 
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  key={item.id} 
-                  className={cn(
-                    "relative flex flex-col md:flex-row gap-8 mb-16",
-                    isEven ? "md:flex-row-reverse" : ""
-                  )}
-                >
+                <div key={item.id} className={cn(
+                  "relative flex flex-col md:flex-row gap-8 mb-16",
+                  isEven ? "md:flex-row-reverse" : ""
+                )}>
                   {/* Timeline Node */}
-                  <div className="absolute left-6 md:left-1/2 top-0 transform -translate-x-1/2 flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-[#0a0a0a] border-2 border-primary/30 flex items-center justify-center relative z-10 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true, amount: 0.5 }}
+                    transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+                    className="absolute left-6 md:left-1/2 top-0 transform -translate-x-1/2 flex items-center justify-center"
+                  >
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#0a0a0a] border-2 border-primary/30 flex items-center justify-center relative z-10 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
                       {getJourneyIcon(item.type)}
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Empty space for desktop alignment */}
                   <div className="hidden md:block md:w-1/2" />
 
-                  {/* Content Card */}
-                  <div className={cn(
-                    "ml-16 md:ml-0 md:w-1/2 relative group",
-                    isEven ? "md:pr-12" : "md:pl-12"
-                  )}>
-                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 md:p-8 hover:bg-white/[0.04] hover:border-primary/30 transition-all duration-300 relative overflow-hidden shadow-2xl">
-                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {/* Content Card with 3D Slide-in */}
+                  <motion.div 
+                    initial={{ opacity: 0, x: isMobile ? 50 : (isEven ? -50 : 50), rotateY: isMobile ? -15 : (isEven ? -10 : 10) }}
+                    whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                    className={cn(
+                      "ml-14 md:ml-0 md:w-1/2 relative group perspective-[1000px]",
+                      isEven ? "md:pr-12" : "md:pl-12"
+                    )}
+                  >
+                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 md:p-8 hover:bg-white/[0.04] hover:border-primary/30 transition-all duration-300 relative shadow-2xl">
+                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-t-2xl" />
                        
-                       <div className="flex items-center gap-2 text-primary font-mono text-sm font-bold mb-2">
-                         <Clock size={14} /> {item.year}
+                       <div className="flex flex-wrap items-center gap-2 text-primary font-mono text-[10px] md:text-sm font-bold mb-3">
+                         <Clock size={14} className="hidden sm:block" /> {item.year}
                        </div>
                        
-                       <h3 className="text-2xl font-bold text-white mb-1">{item.role}</h3>
-                       <p className="text-gray-400 font-medium mb-4 flex items-center gap-2">
-                         <Building2 size={16} /> {item.company}
+                       <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">{item.role}</h3>
+                       <p className="text-gray-400 font-medium mb-4 flex items-center gap-2 text-xs md:text-sm">
+                         <Building2 size={14} /> {item.company}
                        </p>
                        
-                       <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                       <p className="text-gray-400 text-xs md:text-sm leading-relaxed mb-6">
                          {item.desc}
                        </p>
 
                        {/* Embedded Case Studies / Projects */}
                        {item.relatedProjects && item.relatedProjects.length > 0 && (
-                         <div className="space-y-3 bg-black/20 rounded-2xl p-4 border border-white/5 mt-6">
-                           <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest mb-1">
+                         <div className="space-y-3 bg-black/20 rounded-2xl p-3 md:p-4 border border-white/5 mt-4 md:mt-6">
+                           <div className="flex items-center gap-2 text-[9px] md:text-[10px] font-bold text-primary uppercase tracking-widest mb-1">
                              <Link2 size={12} /> Linked Case Studies
                            </div>
                            {item.relatedProjects.map((projId, pIdx) => {
                              const proj = getProjectDetails(projId);
                              if (!proj) return null;
                              return (
-                               <div key={pIdx} onClick={() => router.push(`/projects/${proj.id}`)} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer border border-transparent hover:border-primary/30 transition-all group/proj shadow-lg">
+                               <div key={pIdx} onClick={() => router.push(`/projects/${proj.id}`)} className="flex items-center justify-between p-2 md:p-3 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer border border-transparent hover:border-primary/30 transition-all group/proj shadow-lg">
                                  <div className="flex items-center gap-3 w-full">
-                                   <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-white/10 group-hover/proj:border-primary/30 transition-colors">
+                                   <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shrink-0 border border-white/10 group-hover/proj:border-primary/30 transition-colors">
                                      <img src={proj.image} className="w-full h-full object-cover" alt={proj.title} />
                                    </div>
                                    <div className="flex-1 min-w-0 pr-2">
-                                     <p className="text-sm font-bold text-white group-hover/proj:text-primary transition-colors truncate">{proj.title}</p>
-                                     <p className="text-[11px] text-gray-400 line-clamp-1 mt-0.5" title={proj.desc}>{proj.desc}</p>
+                                     <p className="text-xs md:text-sm font-bold text-white group-hover/proj:text-primary transition-colors truncate">{proj.title}</p>
+                                     <p className="text-[9px] md:text-[11px] text-gray-400 line-clamp-1 mt-0.5" title={proj.desc}>{proj.desc}</p>
                                    </div>
                                  </div>
-                                 <ExternalLink size={16} className="text-gray-500 group-hover/proj:text-primary shrink-0" />
+                                 <ExternalLink size={14} className="text-gray-500 group-hover/proj:text-primary shrink-0" />
                                </div>
                              );
                            })}
                          </div>
                        )}
                     </div>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               );
             })}
           </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { Menu, X, BookOpen, Briefcase, Download, Sparkles } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ const navItems = [
 ];
 
 export function Navbar() {
+  const [isVisible, setIsVisible] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -25,11 +26,36 @@ export function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
+    let lastScrollY = window.scrollY;
 
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setIsScrolled(currentScrollY > 20);
+
+      if (isMobileMenuOpen) return;
+
+      if (currentScrollY > lastScrollY) {
+        // Scrolling Down
+        if (currentScrollY > 150) {
+          setIsVisible(false);
+        }
+      } else {
+        // Scrolling Up
+        setIsVisible(true);
+      }
+
+      // Anchor concept: Only update lastScrollY if we moved significantly
+      // This prevents slow scrolling from being ignored.
+      if (Math.abs(currentScrollY - lastScrollY) > 5) {
+        lastScrollY = currentScrollY;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -39,7 +65,6 @@ export function Navbar() {
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
@@ -68,25 +93,28 @@ export function Navbar() {
 
   return (
     <>
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 flex justify-center px-4 transition-all duration-500",
-          isScrolled ? "py-4" : "py-6"
+          "fixed top-0 left-0 right-0 z-[100] flex justify-center px-4 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          isScrolled ? "py-4" : "py-6",
+          isVisible ? "translate-y-0 opacity-100" : "-translate-y-[120%] opacity-0"
         )}
       >
         <div
           className={cn(
-            "flex items-center justify-between px-5 md:px-6 py-3 rounded-full transition-all duration-500 w-full max-w-6xl",
+            "flex items-center justify-between px-5 md:px-6 py-3 rounded-full transition-all duration-500 w-full max-w-6xl relative overflow-hidden",
             isScrolled
               ? "bg-[#0a0a0a]/80 border border-white/10 shadow-[0_4_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
               : "bg-transparent border border-transparent"
           )}
         >
+          {/* Subtle Glow inside the navbar when scrolled */}
+          {isScrolled && (
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-indigo-500/10 pointer-events-none mix-blend-screen opacity-50" />
+          )}
+
           {/* --- LOGO --- */}
-          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0 relative z-10">
             <div className="relative w-8 h-8 md:w-9 md:h-9 rounded-xl overflow-hidden group-hover:rotate-6 group-hover:scale-105 transition-all duration-300 shadow-lg shadow-primary/20 bg-white/5 border border-white/10 flex items-center justify-center p-1">
               <img src="/icon-192.png" alt="IKY Logo" className="w-full h-full object-contain" />
             </div>
@@ -96,7 +124,7 @@ export function Navbar() {
           </Link>
 
           {/* --- DESKTOP MENU --- */}
-          <nav className="hidden md:flex items-center gap-1 bg-white/[0.03] backdrop-blur-md px-1.5 py-1.5 rounded-full border border-white/5 shadow-inner">
+          <nav className="hidden md:flex relative z-10 items-center gap-1 bg-white/[0.03] backdrop-blur-md px-1.5 py-1.5 rounded-full border border-white/5 shadow-inner">
             {navItems.map((item) => {
               const isActive = item.path === "/" 
                 ? pathname === "/" 
@@ -129,7 +157,7 @@ export function Navbar() {
           </nav>
 
           {/* --- RIGHT ACTION --- */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 relative z-10">
             {showInstallBtn && (
               <Button
                 size="sm"
@@ -158,7 +186,7 @@ export function Navbar() {
             </button>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* --- MOBILE MENU OVERLAY --- */}
       <AnimatePresence>
