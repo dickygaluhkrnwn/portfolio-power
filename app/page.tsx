@@ -466,26 +466,6 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* --- 5. MASSIVE CTA SECTION --- */}
-        <motion.div 
-          initial={{ opacity: 0, y: 50, scale: 0.95 }} 
-          whileInView={{ opacity: 1, y: 0, scale: 1 }} 
-          viewport={{ once: true, amount: 0.3 }} 
-          transition={{ duration: 0.8, type: "spring" }}
-          className="relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden bg-gradient-to-br from-primary/20 via-purple-500/10 to-black border border-white/10 p-8 md:p-24 text-center flex flex-col items-center justify-center shadow-2xl mb-10 group cursor-pointer hover:border-primary/50 transition-colors"
-          onClick={() => router.push("/contact")}
-        >
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none mix-blend-overlay" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100%] h-[100%] bg-primary/10 blur-[150px] rounded-full pointer-events-none md:group-hover:bg-primary/20 transition-colors duration-1000" />
-          
-          <Sparkles className="w-10 h-10 md:w-12 md:h-12 text-primary mb-6 md:mb-8 animate-pulse" />
-          <h2 className="text-4xl md:text-7xl font-heading font-black text-white mb-6 tracking-tighter max-w-4xl drop-shadow-2xl uppercase leading-tight">
-            Let's build something <br className="hidden md:block"/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400 animate-gradient-x">Extraordinary.</span>
-          </h2>
-          <Button size="lg" className="mt-4 md:mt-8 rounded-full text-base md:text-lg font-bold shadow-[0_0_30px_rgba(99,102,241,0.5)] md:group-hover:shadow-[0_0_80px_rgba(99,102,241,0.9)] transition-all h-14 md:h-16 px-8 md:px-12 relative overflow-hidden group/btn bg-white text-black hover:bg-gray-200" onClick={(e) => { e.stopPropagation(); router.push("/contact"); }}>
-            <span className="relative z-10 flex items-center">Start a Project <ArrowRight className="ml-3 w-5 h-5 md:group-hover/btn:translate-x-2 transition-transform" /></span>
-          </Button>
-        </motion.div>
 
       </div>
     </main>
