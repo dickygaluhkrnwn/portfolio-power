@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Send, User, Bot, Sparkles, Link2, Maximize2, Minimize2 } from "lucide-react"; 
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link"; // Gunakan next/link untuk navigasi internal yang cepat
 
 interface Message {
@@ -257,23 +257,44 @@ export function ChatWidget() {
   return (
     <>
       {/* Jendela Chat */}
-      <div
-        className={cn(
-          "fixed z-[60] flex flex-col rounded-[2rem] border border-white/10 bg-[#0a0a0a]/95 backdrop-blur-3xl shadow-[0_0_50px_-15px_rgba(0,0,0,0.8)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden",
-          isOpen
-            ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
-            : "translate-y-10 opacity-0 scale-95 pointer-events-none",
-          isExpanded 
-            ? "inset-4 sm:inset-10 md:inset-20 max-w-5xl mx-auto h-auto max-h-none" // Posisi tengah besar
-            : "bottom-4 right-4 w-[calc(100vw-2rem)] max-w-[400px] h-[550px] max-h-[85vh] sm:right-6 sm:bottom-6" // Posisi pojok kecil
-        )}
-      >
-        {/* Glow effect di belakang header */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 bg-primary/20 blur-[50px] rounded-full pointer-events-none" />
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop Mobile */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[50] bg-black/60 backdrop-blur-sm sm:hidden"
+              onClick={() => setIsOpen(false)}
+            />
+            
+            <motion.div
+            initial={{ y: "100%", opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: "100%", opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className={cn(
+              "fixed z-[60] flex flex-col border border-white/10 bg-[#0a0a0a]/95 backdrop-blur-3xl shadow-[0_-10px_50px_rgba(0,0,0,0.8)] overflow-hidden",
+              // MOBILE NATIVE: Bottom Sheet Style
+              "bottom-0 left-0 right-0 w-full h-[85vh] rounded-t-[2rem] rounded-b-none",
+              // DESKTOP: Floating Widget or Center Expanded
+              isExpanded 
+                ? "sm:inset-10 md:inset-20 sm:max-w-5xl sm:mx-auto sm:h-auto sm:max-h-none sm:rounded-[2rem]"
+                : "sm:bottom-6 sm:right-6 sm:w-[400px] sm:h-[600px] sm:max-h-[85vh] sm:rounded-[2rem] sm:left-auto sm:top-auto"
+            )}
+          >
+            {/* Mobile Drag Indicator (Pill) */}
+            <div className="w-full flex justify-center pt-3 pb-1 sm:hidden absolute top-0 left-0 z-20" onClick={() => setIsOpen(false)}>
+               <div className="w-12 h-1.5 bg-white/20 rounded-full cursor-pointer hover:bg-white/40 transition-colors" />
+            </div>
 
-        {/* Header */}
-        <div className="flex-none flex items-center justify-between border-b border-white/5 p-4 md:p-5 bg-white/[0.02] relative z-10">
-          <div className="flex items-center gap-3">
+            {/* Glow effect di belakang header */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 bg-primary/20 blur-[50px] rounded-full pointer-events-none" />
+
+            {/* Header */}
+            <div className="flex-none flex items-center justify-between border-b border-white/5 p-4 pt-6 sm:pt-4 md:p-5 bg-white/[0.02] relative z-10">
+              <div className="flex items-center gap-3">
             {/* Logo AI: Bot Icon dengan Gradient */}
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-400 shadow-lg shadow-primary/20 border border-white/10 p-2">
               <Sparkles className="h-5 w-5 text-white" />
@@ -364,35 +385,38 @@ export function ChatWidget() {
           <div ref={messagesEndRef} className="h-1" />
         </div>
 
-        {/* Input Form */}
-        <div className="flex-none border-t border-white/10 p-3 md:p-4 bg-[#050505] relative z-10">
-          <form onSubmit={handleSubmit} className="flex gap-2 items-end">
-            <textarea
-              className="flex-1 min-h-[44px] max-h-[120px] bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 resize-none scrollbar-thin scrollbar-thumb-white/10 transition-all placeholder:text-gray-600"
-              placeholder="Tanya soal skill, project, layanan..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
-              disabled={isLoading}
-              rows={1}
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={isLoading || !input.trim()}
-              className="h-11 w-11 rounded-xl shrink-0 transition-all active:scale-95 bg-primary text-white hover:bg-primary/90 border border-primary/50 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:shadow-none"
-            >
-              <Send className="h-5 w-5 ml-1" />
-              <span className="sr-only">Kirim</span>
-            </Button>
-          </form>
-        </div>
-      </div>
+            {/* Input Form */}
+            <div className="flex-none border-t border-white/10 p-3 md:p-4 bg-[#050505] relative z-10 pb-6 sm:pb-4">
+              <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+                <textarea
+                  className="flex-1 min-h-[44px] max-h-[120px] bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 resize-none scrollbar-thin scrollbar-thumb-white/10 transition-all placeholder:text-gray-600"
+                  placeholder="Tanya soal skill, project, layanan..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  disabled={isLoading}
+                  rows={1}
+                />
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  disabled={isLoading || !input.trim()}
+                  className="h-11 w-11 rounded-xl shrink-0 transition-all active:scale-95 bg-primary text-white hover:bg-primary/90 border border-primary/50 shadow-[0_0_20px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:shadow-none"
+                >
+                  <Send className="h-5 w-5 ml-1" />
+                  <span className="sr-only">Kirim</span>
+                </Button>
+              </form>
+            </div>
+          </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* --- TOMBOL TRIGGER FLOATING (DRAGGABLE) --- */}
       <motion.button
